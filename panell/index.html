@@ -1,0 +1,48 @@
+<!doctype html>
+<html lang="ca">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex, nofollow">
+<title>Panell de comandes · Casa Camp</title>
+<link rel="icon" href="../assets/favicon.ico" sizes="any">
+<link rel="icon" type="image/png" sizes="32x32" href="../assets/favicon-32.png">
+<link rel="apple-touch-icon" href="../assets/apple-touch-icon.png">
+<link rel="stylesheet" href="../css/styles.css">
+<link rel="stylesheet" href="../css/panell.css">
+</head>
+<body class="app">
+
+<main class="acces" id="acces" hidden>
+  <img src="../assets/logo.png" alt="Casa Camp" width="256" height="256">
+  <h1>Panell de comandes</h1>
+  <p id="acces-text"></p>
+  <button type="button" class="boto" id="entra" hidden>Entra</button>
+</main>
+
+<div class="app-marc" id="app" hidden>
+  <header class="app-cap">
+    <a href="../" class="app-logo" id="app-logo"><img src="../assets/logo.png" alt="Casa Camp" width="256" height="256"></a>
+    <p class="app-titol">Panell de comandes</p>
+  </header>
+  <nav class="app-nav" aria-label="Seccions del panell">
+    <a href="#avui" data-vista="avui">Avui</a>
+    <a href="#tandes" data-vista="tandes">Tandes</a>
+    <a href="#comandes" data-vista="comandes">Comandes</a>
+    <a href="#transport" data-vista="transport">Transport</a>
+    <a href="#correus" data-vista="correus">Correus</a>
+    <a href="#configuracio" data-vista="configuracio">Configuració</a>
+  </nav>
+  <div class="app-avis" id="app-avis" hidden></div>
+  <main class="app-vista" id="vista" tabindex="-1"></main>
+</div>
+
+<dialog class="dialeg" id="dialeg" aria-labelledby="dialeg-titol"></dialog>
+
+<noscript><p class="avis-noscript">El panell necessita JavaScript.</p></noscript>
+<script src="../js/dades.js"></script>
+<script src="../js/magatzem.js"></script>
+<script src="../js/comu.js"></script>
+<script src="../js/panell.js"></script>
+</body>
+</html>

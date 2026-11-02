@@ -1,0 +1,229 @@
+<!doctype html>
+<html lang="ca">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex">
+<title>Casa Camp · Vedella ecològica en lots de 5 kg</title>
+<meta name="description" content="Criem les vedelles en llibertat, a la pastura. Te n'enviem la carn en lots de 5 kg, en fred, per tandes.">
+<meta property="og:type" content="website">
+<meta property="og:title" content="Casa Camp · Vedella ecològica en lots de 5 kg">
+<meta property="og:description" content="Criem les vedelles en llibertat, a la pastura. Te n'enviem la carn en lots de 5 kg, en fred, per tandes.">
+<!-- PENDENT: og:image i canonical amb URL absoluta quan hi hagi domini ([DOMINI]) -->
+<link rel="icon" href="assets/favicon.ico" sizes="any">
+<link rel="icon" type="image/png" sizes="32x32" href="assets/favicon-32.png">
+<link rel="apple-touch-icon" href="assets/apple-touch-icon.png">
+<link rel="preload" href="assets/fonts/schibsted-grotesk-latin.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="stylesheet" href="css/styles.css">
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@graph": [
+    { "@type": "Organization", "name": "Casa Camp", "telephone": "+34646455128" },
+    { "@type": "Product", "name": "Lot de 5 kg de vedella", "description": "Lot de peces de vedella de 5 kg que s'envia refrigerat, per tandes.", "brand": { "@type": "Brand", "name": "Casa Camp" } }
+  ]
+}
+</script>
+</head>
+<body>
+<header class="cap">
+  <!-- LOGO PENDENT: encara diu «Eco Cassovall», que ja no és el nom -->
+  <a href="./"><img src="assets/logo.png" alt="Casa Camp" width="256" height="256"></a>
+  <button type="button" class="boto" data-obre-full>Demana</button>
+</header>
+
+<main>
+<section class="hero" aria-labelledby="hero-titol">
+  <!-- FOTO REAL PENDENT: vaques per una carretera de muntanya (stock d'Unsplash, Bernd Dittrich; veure PLA-eines/stock/FONTS.md). Exportada amb PLA-eines/3b/exporta-hero.py: retall vertical per a pantalles verticals -->
+  <picture>
+    <source media="(max-aspect-ratio: 4/5)" srcset="assets/fotos/hero-mobil.webp" width="747" height="1245">
+    <img class="hero-foto" src="assets/fotos/hero.webp" srcset="assets/fotos/hero-1600.webp 1600w, assets/fotos/hero.webp 2400w" sizes="100vw" alt="Vaques caminant per una carretera" width="2400" height="1245" fetchpriority="high">
+  </picture>
+  <div class="hero-text">
+    <h1 id="hero-titol">Vedella ecològica de Casa Camp, del camp a casa teva</h1>
+    <p>Criem les vedelles en llibertat, a la pastura. Te n'enviem la carn en lots de 5&nbsp;kg, en fred, per tandes.</p>
+    <button type="button" class="boto" data-obre-full>Demana el teu lot</button>
+  </div>
+</section>
+
+<div class="franja" id="franja">
+  <strong id="fr-data">Propera tanda</strong>
+  <div class="barra" id="fr-barra" aria-hidden="true"><i></i></div>
+  <span id="fr-queden"></span>
+  <span id="fr-anterior"></span>
+</div>
+
+<section class="qui" id="qui" aria-labelledby="qui-titol">
+  <h2 id="qui-titol">Som a Casa Camp</h2>
+  <!-- FOTO REAL PENDENT: la finca o les vaques a la pastura (stock d'Unsplash, AJ Alao; veure PLA-eines/stock/FONTS.md) -->
+  <figure class="qs-foto"><img src="assets/fotos/qui.webp" alt="Vaques pasturant en un prat amb cims al fons" width="1400" height="933" loading="lazy"></figure>
+  <div class="qs-text">
+    <p>Les nostres vedelles viuen a la pastura i mengen farratges naturals, ensitjat de raigràs i ordi de cultius ecològics. Des que neixen ens fixem que prenguin bé el calostre, i no els donem antibiòtics preventius ni pinsos industrials.</p>
+    <p>Fins que la carn surt de casa, tot ho fem nosaltres. Fins ara anava a les carnisseries; ara te l'enviem a tu, directament.</p>
+  </div>
+</section>
+
+<section class="lot" id="lot" aria-labelledby="lot-titol">
+  <div class="lot-graella">
+    <div class="l-cap">
+      <h2 id="lot-titol">Què hi ha en un lot</h2>
+      <p>Un lot són 5&nbsp;kg de carn de les nostres vedelles, tallada en peces. Hi ha peces per fer a la planxa i peces per guisar.</p>
+    </div>
+    <figure class="l-foto">
+      <!-- FOTO REAL PENDENT: el lot obert, amb les sis peces (stock d'Unsplash, Sergey Kotenev: no concorda del tot amb les peces del lot; veure PLA-eines/stock/FONTS.md) -->
+      <img src="assets/fotos/lot.webp" alt="Peces de carn crua sobre un fons clar" width="1400" height="951" loading="lazy">
+    </figure>
+    <div class="l-preu"><strong id="l-preu">000 €</strong><span>Lot de 5&nbsp;kg</span><span id="l-preu-kg">000 €/kg</span></div>
+    <!-- Peces: les pinta js/home.js des de js/dades.js (peces). Aquest és el text de reserva, el mateix. -->
+    <ul class="l-llista" id="l-llista">
+      <li><span>Picada</span><span>1&nbsp;kg</span></li>
+      <li><span>Hamburguesa</span><span>1&nbsp;kg</span></li>
+      <li><span>Entrecot</span><span>1&nbsp;kg</span></li>
+      <li><span>Filet</span><span>0,89&nbsp;kg</span></li>
+      <li><span>Xurrasco</span><span>0,7&nbsp;kg</span></li>
+      <li><span>Estofat</span><span>0,51&nbsp;kg</span></li>
+    </ul>
+    <!-- PENDENT: quant pot variar el pes total del lot (pregunta 2 del pastor) -->
+    <p class="l-nota">Els pesos són aproximats, perquè cada vedella és diferent. En total, el lot fa uns 5&nbsp;kg.</p>
+    <div class="l-boto"><button type="button" class="boto" data-obre-full>Demana el teu lot</button></div>
+    <div class="l-tanda">
+      <div class="t-text">
+        <h3 id="t-titol">Propera tanda</h3>
+        <p class="t-compte" id="t-compte"></p>
+        <p class="t-anterior" id="t-anterior"></p>
+      </div>
+      <div class="barra" id="t-barra" role="progressbar" aria-valuemin="0" aria-valuemax="26" aria-valuenow="0" aria-label="Lots reservats a la tanda"><i></i></div>
+      <div class="t-com">
+        <h3>Com funciona</h3>
+        <p id="t-com-text">Enviem la carn per tandes. A cada tanda hi ajuntem les comandes de moltes cases. La tanda es tanca quan arriba al nombre de lots que hi caben o, com a molt tard, el dia de la data límit. Llavors la preparem i te l'enviem.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="canals" id="canals" aria-labelledby="canals-titol">
+  <div class="canals-intro">
+    <h2 id="canals-titol">Mitja canal i canal sencera</h2>
+    <p>També et venem la vedella sencera o la meitat: és el que en diem una canal (tota la vedella, ja neta) o mitja canal (la meitat).</p>
+  </div>
+  <div class="canals-llista">
+    <!-- PENDENT: pes aproximat de cada canal, com s'entrega (sencera o tallada a peces) i si va per tandes (pregunta 16 del pastor) -->
+    <div class="canal">
+      <div class="canal-cap"><h3>Mitja canal</h3><span class="canal-preu" id="preu-mitja-canal">000 €</span></div>
+      <button type="button" class="boto boto-sec" data-obre-full="mitja-canal">Demana mitja canal</button>
+    </div>
+    <div class="canal">
+      <div class="canal-cap"><h3>Canal sencera</h3><span class="canal-preu" id="preu-canal">000 €</span></div>
+      <button type="button" class="boto boto-sec" data-obre-full="canal">Demana una canal sencera</button>
+    </div>
+  </div>
+</section>
+
+<section class="segell" aria-labelledby="segell-titol">
+  <!-- PENDENT: organisme certificador i número. El logo i el nom de l'organisme només hi van quan el pastor ho confirmi -->
+  <h2 id="segell-titol">Producte ecològic certificat</h2>
+</section>
+
+<section class="faq" id="preguntes" aria-labelledby="faq-titol">
+  <h2 id="faq-titol">Preguntes</h2>
+  <!-- Textos de PLA-COPY.md §1.6. Els [PENDENT] no es mostren: són aquí, cercables -->
+  <div class="faq-llista" id="faq-llista">
+    <!-- PENDENT: el motiu en paraules del pastor; p. ex., si una tanda correspon a una vedella -->
+    <details><summary>Per què per tandes?</summary><p data-places>No podem preparar i enviar lots d'un en un. Ajuntem les comandes en tandes de 26 lots i les preparem i enviem totes alhora.</p></details>
+    <details><summary>Quan es tanca una tanda?</summary><p data-places>Quan arriba a 26 lots o, com a molt tard, el dia de la data límit que veus a la web. El que passi primer.</p></details>
+    <!-- PENDENT: confirmar amb el pastor que una tanda que no s'omple es tanca i s'envia igualment -->
+    <details><summary>I si la tanda no s'omple?</summary><p>Es tanca igualment el dia de la data límit, i la preparem i l'enviem amb els lots que hi hagi.</p></details>
+    <details><summary>Per què es paga per avançat?</summary><p>Així sabem quants lots hem de preparar per a cada tanda. Si et cal, abans de pagar truca'ns i t'ho expliquem.</p></details>
+    <details><summary>Quan m'arribarà?</summary><p data-dies>Quan es tanca la tanda, la preparem i te l'enviem: la tens a casa uns 00 dies després. El dia que la comanda surt cap a casa teva, t'escrivim amb el dia exacte.</p></details>
+    <!-- PENDENT: quins pobles són les rodalies de Sort, tarifes i fins on s'envia -->
+    <details><summary>Quant costa l'enviament?</summary><p>A les rodalies de Sort no et cobrem res: te la portem nosaltres mateixos. Més lluny, te la porta un transportista i l'enviament es paga. Quan facis la comanda i hi posis el codi postal, et diem el preu abans de pagar.</p></details>
+    <!-- PENDENT: com va empaquetada la carn -->
+    <details><summary>Com arriba en fred?</summary><p>Refrigerada fins a la porta de casa, tant si te la portem nosaltres com si te la porta el transportista.</p></details>
+    <!-- PENDENT: què es fa si no hi ha ningú, quan la porta ell i quan la porta el transportista -->
+    <details><summary>I si no hi soc quan arriba?</summary><p>Quan facis la comanda, pots deixar una nota per a l'entrega.</p></details>
+    <!-- PENDENT: màxim de lots per comanda -->
+    <details><summary>Puc demanar més d'un lot?</summary><p>Sí. Tots els lots d'una comanda viatgen junts: si no caben a la tanda d'ara, van a la següent, i t'ho diem abans de pagar.</p></details>
+    <!-- PENDENT: consells de la casa per congelar-la i descongelar-la -->
+    <details><summary>Es pot congelar?</summary><p>Sí.</p></details>
+    <details><summary>Com es paga?</summary><p>Amb targeta, Apple Pay o Google Pay, en fer la comanda.</p></details>
+    <!-- PENDENT: pes, preu, com s'entrega i si va per tandes (pregunta 16 del pastor) -->
+    <details><summary>Puc comprar mitja canal o una canal sencera?</summary><p>Sí, les tens just a sota del lot.</p></details>
+  </div>
+  <p class="faq-final"><b>Encara tens dubtes?</b> Truca'ns al <a href="tel:+34646455128">646 455 128</a>.</p>
+</section>
+</main>
+
+<footer class="peu">
+  <div>
+    <strong>Casa Camp</strong>
+  </div>
+  <div>
+    <p>Telèfon: <a href="tel:+34646455128">646 455 128</a></p>
+  </div>
+  <p class="peu-lema">Criem amb respecte, produïm amb consciència.</p>
+  <nav class="peu-legal" aria-label="Textos legals"><a href="avis-legal.html">Avís legal</a><a href="privacitat.html">Privacitat</a><a href="galetes.html">Galetes</a><a href="panell/" id="peu-panell" hidden>Panell de comandes</a></nav>
+</footer>
+
+<div class="demana-mobil" id="demana-mobil">
+  <button type="button" class="boto" data-obre-full>Demana el teu lot</button>
+  <p id="dm-text"></p>
+</div>
+
+<noscript><p class="avis-noscript">Per demanar, truca'ns al <a href="tel:+34646455128">646 455 128</a>.</p></noscript>
+
+<div class="vel" data-tanca-full></div>
+<aside class="full" id="full" role="dialog" aria-modal="true" aria-labelledby="full-titol" inert>
+  <div class="full-cap"><h2 id="full-titol">Demana el teu lot</h2><button type="button" class="tanca" data-tanca-full aria-label="Tanca">×</button></div>
+  <div id="full-cos">
+  <form id="full-form" novalidate>
+    <section class="pas" id="pas-1" aria-labelledby="pas-1-titol">
+      <h3 id="pas-1-titol">1. Quants lots vols</h3>
+      <div class="quant" id="quant">
+        <button type="button" class="q-menys" id="q-menys" aria-label="Un lot menys">−</button>
+        <output class="q-num" id="q-num" aria-live="polite">1</output>
+        <button type="button" class="q-mes" id="q-mes" aria-label="Un lot més">+</button>
+        <span class="q-unitat" id="q-unitat">lot de 5&nbsp;kg</span>
+      </div>
+      <p class="q-resum" id="q-resum"></p>
+      <p class="q-max" id="q-max" hidden></p>
+      <p class="linia-tanda" id="q-tanda" aria-live="polite"></p>
+      <p class="q-canvi" id="q-canvi" hidden><button type="button" class="enllac-boto" id="q-canvi-boto">Prefereixes un lot de 5&nbsp;kg?</button></p>
+    </section>
+
+    <section class="pas" id="pas-2" aria-labelledby="pas-2-titol">
+      <h3 id="pas-2-titol">2. On t'ho portem</h3>
+      <div class="camps">
+        <div class="camp"><label for="f-nom">Nom</label><input id="f-nom" name="nom" autocomplete="given-name" placeholder=" " aria-describedby="f-nom-err"><span class="error" id="f-nom-err" hidden></span></div>
+        <div class="camp"><label for="f-cognoms">Cognoms</label><input id="f-cognoms" name="cognoms" autocomplete="family-name" placeholder=" " aria-describedby="f-cognoms-err"><span class="error" id="f-cognoms-err" hidden></span></div>
+        <div class="camp"><label for="f-telefon">Telèfon</label><input id="f-telefon" name="telefon" type="tel" autocomplete="tel" inputmode="tel" placeholder=" " aria-describedby="f-telefon-aj f-telefon-err"><small id="f-telefon-aj">Per si t'hem de trucar per l'entrega.</small><span class="error" id="f-telefon-err" hidden></span></div>
+        <div class="camp"><label for="f-email">Correu electrònic</label><input id="f-email" name="email" type="email" autocomplete="email" placeholder=" " aria-describedby="f-email-aj f-email-err"><small id="f-email-aj">Hi rebràs la confirmació i els avisos de l'entrega.</small><span class="error" id="f-email-err" hidden></span></div>
+        <div class="camp ample"><label for="f-adreca">Adreça</label><input id="f-adreca" name="adreca" autocomplete="street-address" placeholder=" " aria-describedby="f-adreca-aj f-adreca-err"><small id="f-adreca-aj">Carrer, número, pis i porta</small><span class="error" id="f-adreca-err" hidden></span></div>
+        <div class="camp"><label for="f-cp">Codi postal</label><input id="f-cp" name="cp" autocomplete="postal-code" inputmode="numeric" placeholder=" " aria-describedby="f-cp-err"><span class="error" id="f-cp-err" hidden></span></div>
+        <div class="camp"><label for="f-poblacio">Població</label><input id="f-poblacio" name="poblacio" autocomplete="address-level2" placeholder=" " aria-describedby="f-poblacio-err"><span class="error" id="f-poblacio-err" hidden></span></div>
+        <div class="camp ample"><label for="f-notes">Notes per a l'entrega (si cal)</label><textarea id="f-notes" name="notes" autocomplete="off" placeholder=" " rows="2"></textarea></div>
+      </div>
+      <div class="desglos" id="desglos" aria-live="polite">
+        <div><span id="d-lots">Lots</span><span id="d-lots-imp"></span></div>
+        <div><span>Enviament</span><span id="d-env"></span></div>
+        <div class="total"><span>Total</span><span id="d-total"></span></div>
+      </div>
+      <p class="nota-enviament" id="d-nota"></p>
+      <p class="avis-errors" id="avis-errors" role="alert" hidden></p>
+      <button type="button" class="boto boto-ample" id="continua">Continua</button>
+    </section>
+
+    <section class="pas" id="pas-3" aria-labelledby="pas-3-titol" hidden>
+      <h3 id="pas-3-titol">3. Pagament</h3>
+      <div id="pas-3-cos"></div>
+    </section>
+  </form>
+  </div>
+</aside>
+
+<script src="js/dades.js"></script>
+<script src="js/magatzem.js"></script>
+<script src="js/comu.js"></script>
+<script src="js/compra.js"></script>
+<script src="js/home.js"></script>
+</body>
+</html>
