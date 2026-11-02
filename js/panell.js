@@ -41,6 +41,64 @@
     }
   };
 
+  /* ---------- Vista mòbil (només per ensenyar el panell des de l'ordinador) ---------- */
+
+  const VISTA_MOBIL = 'cassovall:vista-mobil';
+  const dinsMarc = /(^|[?&])marc=mobil(&|$)/.test(location.search);
+  let marcActiu = false;
+  const llegeixVistaMobil = () => {
+    try {
+      return window.localStorage.getItem(VISTA_MOBIL) === '1';
+    } catch (e) {
+      return false;
+    }
+  };
+  const desaVistaMobil = (on) => {
+    try {
+      window.localStorage.setItem(VISTA_MOBIL, on ? '1' : '0');
+    } catch (e) {
+      /* sense localStorage: no es recorda i comença apagat */
+    }
+  };
+  function posaVistaMobil(on) {
+    const b = id('vista-mobil');
+    const marc = id('marc-mobil');
+    if (on === marcActiu) return;
+    if (!on) {
+      // El hash de dins del marc es manté en apagar l'interruptor
+      try {
+        const f = marc.querySelector('iframe');
+        const h = f && f.contentWindow.location.hash;
+        if (h && h !== location.hash) location.hash = h;
+      } catch (e) {
+        /* sense accés al marc: es queda el hash actual */
+      }
+      marc.innerHTML = '';
+    } else {
+      const f = document.createElement('iframe');
+      f.title = 'Panell en vista mòbil';
+      f.src = location.pathname + '?presentacio&marc=mobil' + location.hash;
+      marc.appendChild(f);
+    }
+    marcActiu = on;
+    document.body.classList.toggle('vista-mobil-activa', on);
+    b.setAttribute('aria-checked', String(on));
+    if (!on) pinta();
+  }
+  function iniciaVistaMobil() {
+    const b = id('vista-mobil');
+    if (dinsMarc) {
+      document.body.classList.add('dins-marc');
+      return;
+    }
+    b.addEventListener('click', () => {
+      const on = !marcActiu;
+      desaVistaMobil(on);
+      posaVistaMobil(on);
+    });
+    if (llegeixVistaMobil() && window.matchMedia('(min-width: 700px)').matches) posaVistaMobil(true);
+  }
+
   let dinsApp = false;
   function arrenca() {
     const acces = id('acces');
@@ -79,6 +137,7 @@
       if (info.origen === 'local' && info.tipus === 'vista') return;
       pinta();
     });
+    iniciaVistaMobil();
     pinta();
   }
 
@@ -87,10 +146,12 @@
   function ruta() {
     const h = decodeURIComponent(location.hash.replace(/^#/, ''));
     if (h.startsWith('comanda=')) return { vista: 'comandes', comanda: h.slice(8) };
+    if (h.startsWith('tanda=')) return { vista: 'tandes', tanda: h.slice(6) };
     return { vista: VISTES.includes(h) ? h : 'avui' };
   }
 
   function pinta() {
+    if (marcActiu) return; // el panell es veu dins del marc; el marc pinta pel seu compte
     const r = ruta();
     $$('.app-nav a').forEach((a) => {
       const actual = a.dataset.vista === r.vista;
@@ -101,7 +162,7 @@
       } else a.removeAttribute('aria-current');
     });
     const v = id('vista');
-    const fet = r.comanda ? fitxa(r.comanda) : { avui, tandes, comandes, transport, correus, configuracio }[r.vista]();
+    const fet = r.comanda ? fitxa(r.comanda) : r.tanda ? vistaTanda(r.tanda) : { avui, tandes, comandes, transport, correus, configuracio }[r.vista]();
     v.innerHTML = fet.html;
     if (fet.despres) fet.despres(v);
   }
@@ -122,6 +183,13 @@
   const barraHTML = (percent, etiqueta) => `<div class="barra" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="${percent}" aria-label="${esc(etiqueta)}"><i data-amplada="${percent}"></i></div>`;
   const fixaBarres = (arrel) => $$('[data-amplada]', arrel).forEach((i) => (i.style.width = i.dataset.amplada + '%'));
   const estatTanda = (t) => (t.vencuda ? 'Oberta · data límit passada' : ESTATS[t.estat]);
+  const enllacTanda = (t) => '#tanda=' + encodeURIComponent(t.id);
+  const passosHTML = (t) => {
+    const passos = D.estatsTanda
+      .map((e) => `<li${e === t.estat ? ' aria-current="step"' : ''} class="${D.estatsTanda.indexOf(e) < D.estatsTanda.indexOf(t.estat) ? 'fet' : ''}">${ESTATS[e]}</li>`)
+      .join('');
+    return `<ol class="passos-estat" aria-label="Estat de la tanda ${t.numero}: ${esc(ESTATS[t.estat])}">${passos}</ol>`;
+  };
 
   /* ---------- Avui ---------- */
 
@@ -157,9 +225,11 @@
     let tanda = '<p>Encara no hi ha cap tanda oberta.</p>';
     if (t) {
       const o = t.ocupacio;
-      tanda = `<h3>Tanda ${t.numero} · data límit ${dataCurta(t.dataLimit)}</h3>
+      tanda = `<a class="targeta targeta-enllac" href="${enllacTanda(t)}">
+        <h3>Tanda ${t.numero} · data límit ${dataCurta(t.dataLimit)}</h3>
         ${barraHTML(o.percent, `Lots reservats a la tanda ${t.numero}: ${o.lots} de ${o.places}`)}
-        <p class="comptador">${o.lots} de ${o.places} lots · en falten ${o.lliures}</p>`;
+        <p class="comptador">${o.lots} de ${o.places} lots · en falten ${o.lliures}</p>
+      </a>`;
     }
     // El pas següent de cada tanda que no és oberta ni entregada (o que és oberta però ha passat la data límit)
     const pendents = M.tandes().filter((x) => x.estat !== 'entregada' && (x.estat !== 'oberta' || x.vencuda)).reverse()
@@ -171,7 +241,7 @@
         </li>`).join('')}</ul></section>`
       : '';
     const html = `<h2>Avui</h2>${caixaFlaix}${avisos}${feina}
-      <section class="targeta">${tanda}</section>
+      ${t ? tanda : `<section class="targeta">${tanda}</section>`}
       <section>
         <h3>Comandes noves (${noves.length})</h3>
         ${noves.length ? `<ul class="fileres">${noves.map((c) => filaComanda(c, true)).join('')}</ul>` : '<p class="buit">Avui no ha entrat cap comanda nova.</p>'}
@@ -220,41 +290,69 @@
     const cartes = llista.map((t) => {
       const n = M.comandesDeTanda(t.id).length;
       const o = t.ocupacio;
-      const seg = M.estatsPossibles(t.id)[0];
-      const passos = D.estatsTanda
-        .map((e) => `<li${e === t.estat ? ' aria-current="step"' : ''} class="${D.estatsTanda.indexOf(e) < D.estatsTanda.indexOf(t.estat) ? 'fet' : ''}">${ESTATS[e]}</li>`)
-        .join('');
-      const modificable = t.estat !== 'entregada';
-      const places = t.estat === 'oberta' || t.estat === 'completa';
-      return `<article class="targeta tanda" data-tanda="${esc(t.id)}">
-        <h3>Tanda ${t.numero} · ${o.lots} de ${o.places} lots · ${n} ${n === 1 ? 'comprador' : 'compradors'} · data límit ${dataCurta(t.dataLimit)}</h3>
-        ${t.vencuda ? '<p class="avis-tanda">La data límit ja ha passat: la tanda no admet més comandes.</p>' : ''}
-        <ol class="passos-estat" aria-label="Estat de la tanda ${t.numero}: ${esc(ESTATS[t.estat])}">${passos}</ol>
+      return `<a class="targeta tanda targeta-enllac" href="${enllacTanda(t)}">
+        <h3>Tanda ${t.numero} · ${esc(estatTanda(t))}</h3>
+        <p class="comptador">${o.lots} de ${o.places} lots reservats · ${n} ${n === 1 ? 'comprador' : 'compradors'} · data límit ${dataCurta(t.dataLimit)}</p>
         ${barraHTML(o.percent, `Lots reservats a la tanda ${t.numero}: ${o.lots} de ${o.places}`)}
+      </a>`;
+    });
+    const html = `<h2>Tandes</h2>${caixaFlaix}<button type="button" class="boto" data-accio="nova">Obre una tanda nova</button><div class="llista-tandes">${cartes.join('')}</div>`;
+    return { html, despres: (v) => { fixaBarres(v); $$('[data-accio="nova"]', v).forEach((b) => b.addEventListener('click', obreTandaNova)); } };
+  }
+
+  /* ---------- Vista d'una tanda (#tanda=<id>) ---------- */
+
+  function vistaTanda(tandaId) {
+    const t = M.tanda(tandaId);
+    const enrere = '<a class="enrere" href="#tandes">Tandes</a>';
+    if (!t) return { html: `${enrere}<h2>Tanda</h2><p class="buit">No hem trobat aquesta tanda.</p>` };
+    const cs = M.comandesDeTanda(t.id);
+    const n = cs.length;
+    const o = t.ocupacio;
+    const seg = M.estatsPossibles(t.id)[0];
+    const modificable = t.estat !== 'entregada';
+    const places = t.estat === 'oberta' || t.estat === 'completa';
+    const kg = C.kg(o.lots * D.pesLot().kgReals);
+    const dl = [
+      ['Data límit', dataCurta(t.dataLimit)],
+      // La barra va amb la xifra que mesura: sota la línia d'estats es llegia com el progrés de l'entrega (jutge, 02/11)
+      ['Lots reservats', `${o.lots} de ${o.places}${barraHTML(o.percent, `Lots reservats a la tanda ${t.numero}: ${o.lots} de ${o.places}`)}`],
+      ['Pes', `${kg} kg`],
+      ['Compradors', String(n)],
+      ['Import dels lots', esc(D.preuProducte('lot', o.lots).etiqueta)],
+    ].map(([a, b]) => `<div><dt>${a}</dt><dd>${b}</dd></div>`).join('');
+    const html = `${enrere}
+      <h2>Tanda ${t.numero} <span class="estat-tanda">· ${esc(ESTATS[t.estat])}</span></h2>
+      ${caixaFlaix}
+      ${t.vencuda ? '<p class="avis-tanda no-imprimeix">La data límit ja ha passat: la tanda no admet més comandes.</p>' : ''}
+      <section class="targeta tanda no-imprimeix" aria-label="Resum de la tanda ${t.numero}">
+        ${passosHTML(t)}
+        <dl class="dades dades-resum">${dl}</dl>
         <div class="accions">
           ${seg ? `<button type="button" class="boto" data-accio="estat" data-seg="${seg}">Passa a «${ESTATS[seg]}»</button>` : ''}
           ${modificable ? '<button type="button" class="boto boto-lleu" data-accio="data">Canvia la data límit</button>' : ''}
           ${places ? '<button type="button" class="boto boto-lleu" data-accio="places">Canvia els lots</button>' : ''}
         </div>
-      </article>`;
-    });
-    const html = `<h2>Tandes</h2>${caixaFlaix}<button type="button" class="boto" data-accio="nova">Obre una tanda nova</button><div class="llista-tandes">${cartes.join('')}</div>`;
-    return { html, despres: (v) => { fixaBarres(v); lligaTandes(v); } };
-  }
-
-  function lligaTandes(v) {
-    $$('[data-accio="nova"]', v).forEach((b) => b.addEventListener('click', obreTandaNova));
-    $$('.tanda', v).forEach((art) => {
-      const idT = art.dataset.tanda;
-      const t = M.tanda(idT);
+      </section>
+      <section class="no-imprimeix"><h3>Comandes de la tanda (${n})</h3>
+        ${n ? `<ul class="fileres">${cs.map((c) => filaComanda(c, true)).join('')}</ul>` : '<p class="buit">Aquesta tanda encara no té comandes.</p>'}
+      </section>
+      <section><h3>Transport</h3>
+        <div class="accions"><button type="button" class="boto boto-lleu" id="imprimeix">Imprimeix</button><button type="button" class="boto boto-lleu" id="csv">Baixa-la en Excel (CSV)</button></div>
+        ${blocTransport(t.id)}
+      </section>`;
+    return { html, despres: (v) => {
+      fixaBarres(v);
       const on = (acc, fn) => {
-        const b = $(`[data-accio="${acc}"]`, art);
+        const b = $(`[data-accio="${acc}"]`, v);
         if (b) b.addEventListener('click', () => fn(b));
       };
       on('estat', (b) => canviaEstat(t, b.dataset.seg));
       on('data', () => canviaData(t));
       on('places', () => canviaPlaces(t));
-    });
+      id('imprimeix').addEventListener('click', () => window.print());
+      id('csv').addEventListener('click', () => baixaCSV(t.id));
+    } };
   }
 
   function canviaEstat(t, seg) {
@@ -441,7 +539,7 @@
         ['Comanda', esc(c.id)],
         ['Feta', C.dataHora(c.creada)],
         ['Producte', esc(C.producte(c.producte, c.lots))],
-        ['Tanda', c.tandaNumero ? `Tanda ${c.tandaNumero} · ${esc(ESTATS[c.estat])}` : 'A part, sense tanda'],
+        ['Tanda', c.tandaNumero ? `<a href="#tanda=${encodeURIComponent(c.tandaId)}">Tanda ${c.tandaNumero}</a> · ${esc(ESTATS[c.estat])}` : 'A part, sense tanda'],
         ['Import', esc(C.importLots(c.producte, c.lots))],
         ['Enviament', env ? esc(env) : 'Per acordar'],
         ['Total', esc(C.importTotal(c))],
@@ -507,33 +605,38 @@
       : '<p class="buit">Cap entrega d’aquest tipus.</p>'}</section>`;
   }
 
+  // Les dues llistes d'una tanda (o el text buit); les fan servir Transport i la vista de tanda
+  function blocTransport(tandaId) {
+    if (!tandaId || !M.comandesDeTanda(tandaId).length) return '<p class="buit">Aquesta tanda encara no té comandes.</p>';
+    const ll = M.llistesEntrega(tandaId);
+    return taulaTransport('Les repartim nosaltres', ll.repartimentPropi) + taulaTransport('Transportista', ll.transportista);
+  }
+
   function transport() {
     const tandes = M.tandes().slice().reverse();
     if (!tandaTransport || !M.tanda(tandaTransport)) {
       const act = M.tandaActual();
       tandaTransport = act ? act.id : tandes.length ? tandes[0].id : '';
     }
-    const ll = tandaTransport ? M.llistesEntrega(tandaTransport) : null;
-    const buida = !tandaTransport || !M.comandesDeTanda(tandaTransport).length;
     const html = `<h2>Transport</h2>
       <div class="filtres">
         <div class="camp-pla"><label for="t-tanda">Tanda</label><select id="t-tanda">${tandes.map((t) => `<option value="${esc(t.id)}"${t.id === tandaTransport ? ' selected' : ''}>Tanda ${t.numero} · ${esc(ESTATS[t.estat])}</option>`).join('')}</select></div>
         <div class="accions"><button type="button" class="boto boto-lleu" id="imprimeix">Imprimeix</button><button type="button" class="boto boto-lleu" id="csv">Baixa-la en Excel (CSV)</button></div>
       </div>
       ${tandaTransport ? `<h3>Tanda ${M.tanda(tandaTransport).numero} · data límit ${dataCurta(M.tanda(tandaTransport).dataLimit)}</h3>` : ''}
-      ${buida ? '<p class="buit">Aquesta tanda encara no té comandes.</p>' : taulaTransport('Les repartim nosaltres', ll.repartimentPropi) + taulaTransport('Transportista', ll.transportista)}`;
+      ${blocTransport(tandaTransport)}`;
     return { html, despres: () => {
       const s = id('t-tanda');
       if (s) s.addEventListener('change', () => { tandaTransport = s.value; pinta(); });
       id('imprimeix').addEventListener('click', () => window.print());
-      id('csv').addEventListener('click', () => baixaCSV());
+      id('csv').addEventListener('click', () => baixaCSV(tandaTransport));
     } };
   }
 
-  function baixaCSV() {
-    if (!tandaTransport) return;
-    const ll = M.llistesEntrega(tandaTransport);
-    const t = M.tanda(tandaTransport);
+  function baixaCSV(tandaId) {
+    if (!tandaId) return;
+    const ll = M.llistesEntrega(tandaId);
+    const t = M.tanda(tandaId);
     const cap = ['Entrega', 'Nom', 'Adreça', 'CP', 'Població', 'Telèfon', 'Lots', 'Notes'];
     const files = [];
     [['Les repartim nosaltres', ll.repartimentPropi], ['Transportista', ll.transportista]].forEach(([nom, llista]) => {

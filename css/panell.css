@@ -24,6 +24,19 @@ body.app{--x-app:calc(max(0px,(100% - 960px) / 2) + var(--marge-x))}
 }
 @media (hover:hover){.app-nav a:hover{background:var(--tria)}}
 .app-nav a[aria-current="page"]{background:var(--fosc);color:var(--sobre-fosc)}
+/* Interruptor «Vista mòbil» (només a pantalla ampla i fora del marc): mostra el panell en un marc de 390 px */
+.vista-mobil{display:none;margin-left:auto;align-items:center;gap:.6rem;min-height:44px;padding:.3rem .5rem .3rem .9rem;border:1.5px solid var(--sobre-fosc-2);border-radius:999px;background:transparent;color:var(--sobre-fosc);font:700 .94rem var(--f-cos);cursor:pointer}
+.vista-mobil::after{content:"";width:2.4rem;height:1.4rem;border-radius:999px;background:radial-gradient(circle at .7rem 50%,var(--fosc) 0 .45rem,transparent .5rem) var(--sobre-fosc-2)}
+.vista-mobil[aria-checked="true"]::after{background:radial-gradient(circle at calc(100% - .7rem) 50%,var(--fosc) 0 .45rem,transparent .5rem) var(--sobre-fosc)}
+.vista-mobil:focus-visible{outline:3px solid var(--sobre-fosc);outline-offset:3px}
+@media (hover:hover){.vista-mobil:hover{background:rgba(255,255,255,.12)}}
+.marc-mobil{display:none}
+@media (min-width:700px){
+  body:not(.dins-marc) .vista-mobil{display:inline-flex}
+  body.vista-mobil-activa .app-nav,body.vista-mobil-activa .app-avis,body.vista-mobil-activa .app-vista{display:none}
+  body.vista-mobil-activa .marc-mobil{display:flex;justify-content:center;padding:20px var(--x-app) 40px}
+  .marc-mobil iframe{display:block;width:390px;height:844px;border:1px solid var(--vora);border-radius:28px;background:var(--fons)}
+}
 .app-avis{margin:0;padding:.7rem var(--x-app);background:var(--tria);color:var(--cta-fosc);font-weight:600}
 .app-vista{max-width:960px;margin-inline:auto;padding:20px var(--marge-x) 64px;outline:0}
 .app-vista>*+*{margin-top:1rem}
@@ -61,6 +74,18 @@ body.app{--x-app:calc(max(0px,(100% - 960px) / 2) + var(--marge-x))}
 .passos-estat li.fet+li::before{background:var(--fosc)}
 .passos-estat li[aria-current="step"]{color:var(--text);font-weight:800}
 .targeta.tanda .barra{margin-bottom:.9rem}
+/* Targeta clicable sencera (llista de Tandes i tanda actual d'Avui): un sol enllaç */
+.targeta-enllac{display:block;color:inherit;text-decoration:none}
+.targeta-enllac:focus-visible{outline:3px solid var(--cta);outline-offset:3px}
+.targeta-enllac h3{margin-bottom:.2rem}
+.targeta-enllac .barra{margin-bottom:0}
+@media (hover:hover){.targeta-enllac:hover{background:var(--tria)}.targeta-enllac:hover h3{text-decoration:underline}}
+/* Vista d'una tanda */
+.estat-tanda{font-weight:400;color:var(--text-2)}
+.targeta.tanda>.dades{margin-top:.9rem}
+.dades.dades-resum div{grid-template-columns:minmax(7rem,9rem) minmax(0,1fr)}
+.targeta.tanda .dades-resum .barra{max-width:220px;margin:.4rem 0 .2rem}
+.targeta.tanda>.accions{margin-top:1rem}
 
 /* Dades en parelles (fitxa del comprador, correu) */
 .dades{display:grid;gap:.4rem;margin:0}
@@ -85,6 +110,7 @@ body.app{--x-app:calc(max(0px,(100% - 960px) / 2) + var(--marge-x))}
 
 /* ---------- Transport ---------- */
 .llista-transport{overflow:hidden}
+.app-vista section>.llista-transport{margin-top:.8rem}
 .taula{width:100%;border-collapse:collapse;font-size:.94rem}
 .taula th{text-align:left;padding:.4rem .5rem;border-bottom:2px solid var(--text);font-size:var(--t-petit);color:var(--text-2)}
 .taula td{padding:.5rem;border-bottom:1px solid var(--linia);vertical-align:top;overflow-wrap:anywhere}
@@ -125,7 +151,7 @@ body.app{--x-app:calc(max(0px,(100% - 960px) / 2) + var(--marge-x))}
 /* ---------- Impressió (llistes del transport) ---------- */
 @media print{
   body.app{background:#fff}
-  .app-cap,.app-nav,.app-avis,.accions,.filtres .camp-pla,.enrere,.dialeg{display:none}
+  .app-cap,.app-nav,.app-avis,.accions,.filtres .camp-pla,.enrere,.dialeg,.no-imprimeix{display:none}
   .app-vista{max-width:none;padding:0}
   .targeta{padding:0;border-radius:0}
   .taula th,.taula td{border-bottom:1px solid #000}

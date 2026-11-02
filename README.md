@@ -77,7 +77,7 @@ cada una porta el comentari `<!-- FOTO REAL PENDENT: … -->`; es troben amb una
 
 | Foto | On és | Fitxers | Què hi ha d'anar | Mida i format |
 |---|---|---|---|---|
-| Portada | Hero de `index.html` | `assets/fotos/hero.webp` (2400 px), `hero-1600.webp` (1600 px) i `hero-mobil.webp` (vertical) | Les vaques o la finca, amb espai per al text a l'esquerra | Horitzontal, 2400 × 1245 px, WebP. El mòbil, una versió vertical de 747 × 1245 px |
+| Portada | Hero de `index.html` | `assets/fotos/hero.webp` (ara, una foto provisional de 2048 px), `hero-1600.webp` (1600 px) i `hero-mobil.webp` (vertical) | Les vaques o la finca, amb espai per al text a l'esquerra | Horitzontal, 2400 × 1245 px, WebP. El mòbil, una versió vertical de 747 × 1245 px |
 | Som a Casa Camp | Secció «Som a Casa Camp» | `assets/fotos/qui.webp` | La finca o les vaques a la pastura | 1400 × 933 px (3:2), WebP |
 | El lot | Secció «Què hi ha en un lot» | `assets/fotos/lot.webp` | El lot obert, amb les sis peces (picada, hamburguesa, filet, estofat, xurrasco i entrecot) | 1400 × 951 px, WebP |
 

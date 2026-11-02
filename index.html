@@ -34,10 +34,10 @@
 
 <main>
 <section class="hero" aria-labelledby="hero-titol">
-  <!-- FOTO REAL PENDENT: vaques per una carretera de muntanya (stock d'Unsplash, Bernd Dittrich; veure PLA-eines/stock/FONTS.md). Exportada amb PLA-eines/3b/exporta-hero.py: retall vertical per a pantalles verticals -->
+  <!-- FOTO PROVISIONAL (B, triada per en Lluc el 02/11/2026): prats de muntanya sota un cim. Exportada amb PLA-eines/fotos-hero/exporta-hero-b.py: retall vertical per a pantalles verticals -->
   <picture>
-    <source media="(max-aspect-ratio: 4/5)" srcset="assets/fotos/hero-mobil.webp" width="747" height="1245">
-    <img class="hero-foto" src="assets/fotos/hero.webp" srcset="assets/fotos/hero-1600.webp 1600w, assets/fotos/hero.webp 2400w" sizes="100vw" alt="Vaques caminant per una carretera" width="2400" height="1245" fetchpriority="high">
+    <source media="(max-aspect-ratio: 4/5)" srcset="assets/fotos/hero-mobil.webp" width="720" height="1199">
+    <img class="hero-foto" src="assets/fotos/hero.webp" srcset="assets/fotos/hero-1600.webp 1600w, assets/fotos/hero.webp 2048w" sizes="100vw" alt="Prats de muntanya sota un cim rocós" width="2048" height="1536" fetchpriority="high">
   </picture>
   <div class="hero-text">
     <h1 id="hero-titol">Vedella ecològica de Casa Camp, del camp a casa teva</h1>
@@ -195,12 +195,12 @@
       <div class="camps">
         <div class="camp"><label for="f-nom">Nom</label><input id="f-nom" name="nom" autocomplete="given-name" placeholder=" " aria-describedby="f-nom-err"><span class="error" id="f-nom-err" hidden></span></div>
         <div class="camp"><label for="f-cognoms">Cognoms</label><input id="f-cognoms" name="cognoms" autocomplete="family-name" placeholder=" " aria-describedby="f-cognoms-err"><span class="error" id="f-cognoms-err" hidden></span></div>
-        <div class="camp"><label for="f-telefon">Telèfon</label><input id="f-telefon" name="telefon" type="tel" autocomplete="tel" inputmode="tel" placeholder=" " aria-describedby="f-telefon-aj f-telefon-err"><small id="f-telefon-aj">Per si t'hem de trucar per l'entrega.</small><span class="error" id="f-telefon-err" hidden></span></div>
-        <div class="camp"><label for="f-email">Correu electrònic</label><input id="f-email" name="email" type="email" autocomplete="email" placeholder=" " aria-describedby="f-email-aj f-email-err"><small id="f-email-aj">Hi rebràs la confirmació i els avisos de l'entrega.</small><span class="error" id="f-email-err" hidden></span></div>
-        <div class="camp ample"><label for="f-adreca">Adreça</label><input id="f-adreca" name="adreca" autocomplete="street-address" placeholder=" " aria-describedby="f-adreca-aj f-adreca-err"><small id="f-adreca-aj">Carrer, número, pis i porta</small><span class="error" id="f-adreca-err" hidden></span></div>
+        <div class="camp"><label for="f-telefon">Telèfon</label><input id="f-telefon" name="telefon" type="tel" autocomplete="tel" inputmode="tel" placeholder=" " aria-describedby="f-telefon-err"><span class="error" id="f-telefon-err" hidden></span></div>
+        <div class="camp"><label for="f-email">Correu electrònic</label><input id="f-email" name="email" type="email" autocomplete="email" placeholder=" " aria-describedby="f-email-err"><span class="error" id="f-email-err" hidden></span></div>
+        <div class="camp ample"><label for="f-adreca">Adreça</label><input id="f-adreca" name="adreca" autocomplete="street-address" placeholder=" " aria-describedby="f-adreca-err"><span class="error" id="f-adreca-err" hidden></span></div>
         <div class="camp"><label for="f-cp">Codi postal</label><input id="f-cp" name="cp" autocomplete="postal-code" inputmode="numeric" placeholder=" " aria-describedby="f-cp-err"><span class="error" id="f-cp-err" hidden></span></div>
         <div class="camp"><label for="f-poblacio">Població</label><input id="f-poblacio" name="poblacio" autocomplete="address-level2" placeholder=" " aria-describedby="f-poblacio-err"><span class="error" id="f-poblacio-err" hidden></span></div>
-        <div class="camp ample"><label for="f-notes">Notes per a l'entrega (si cal)</label><textarea id="f-notes" name="notes" autocomplete="off" placeholder=" " rows="2"></textarea></div>
+        <div class="camp ample"><label for="f-notes">Notes per a l'entrega (opcional)</label><textarea id="f-notes" name="notes" autocomplete="off" placeholder=" " rows="2"></textarea></div>
       </div>
       <div class="desglos" id="desglos" aria-live="polite">
         <div><span id="d-lots">Lots</span><span id="d-lots-imp"></span></div>
