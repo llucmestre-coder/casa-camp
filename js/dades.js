@@ -57,8 +57,8 @@
       // `maxPerComanda`: null = el que càpiga en una tanda (només per als que ocupen places).
       productes: {
         lot: { nom: 'Lot de 5 kg', ocupaPlaces: true, placesPerUnitat: 1, maxPerComanda: null },
-        'mitja-canal': { nom: 'Mitja canal', preu: 0, preuMostra: true, etiquetaMostra: '000 €', ocupaPlaces: false, placesPerUnitat: 0, maxPerComanda: 10, pendent: true },
-        canal: { nom: 'Canal sencera', preu: 0, preuMostra: true, etiquetaMostra: '000 €', ocupaPlaces: false, placesPerUnitat: 0, maxPerComanda: 10, pendent: true },
+        'mitja-canal': { nom: 'Mitja canal', preu: 0, preuMostra: true, etiquetaMostra: '000 €', kg: 0, etiquetaPesMostra: 'Uns 000 kg', etiquetaPerKgMostra: '000 €/kg', ocupaPlaces: false, placesPerUnitat: 0, maxPerComanda: 10, pendent: true },
+        canal: { nom: 'Canal sencera', preu: 0, preuMostra: true, etiquetaMostra: '000 €', kg: 0, etiquetaPesMostra: 'Uns 000 kg', etiquetaPerKgMostra: '000 €/kg', ocupaPlaces: false, placesPerUnitat: 0, maxPerComanda: 10, pendent: true },
       },
 
       // Tandes: un sol model (en Lluc, 01/11/2026 vespre), 26 lots amb data límit. Una tanda surt quan arriba a
@@ -224,6 +224,16 @@
     d.pesLot = function () {
       const grams = d.peces.reduce((s, p) => s + p.grams, 0);
       return { kgNominal: d.lot.kg, grams, kgReals: grams / 1000 };
+    };
+
+    // Pes i preu per kg de les canals (fitxa de la home). `kg` és el pes aproximat: PENDENT del pastor (pregunta 16).
+    d.pesCanal = function (id) {
+      const p = d.productes[id];
+      return !p.kg ? p.etiquetaPesMostra : 'Uns ' + String(p.kg).replace('.', ',') + ' kg';
+    };
+    d.preuPerKgCanal = function (id) {
+      const p = d.productes[id];
+      return p.preuMostra || !p.kg ? p.etiquetaPerKgMostra : d.formatEuros(p.preu / p.kg) + '/kg';
     };
 
     d.preuPerKg = function () {

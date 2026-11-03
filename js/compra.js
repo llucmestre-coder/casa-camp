@@ -42,10 +42,12 @@
 
   /* ---------- Obrir i tancar (focus atrapat, Esc, el focus torna al botó) ---------- */
 
-  function obre(producte, opener) {
+  function obre(producte, opener, lots) {
     const id = D.productes[producte] ? producte : 'lot';
     if (id !== S.producte) S.lots = 1;
     S.producte = id;
+    // La caixa de compra de la home porta la quantitat triada (data-lots); el full la manté dins dels límits
+    if (id === 'lot' && lots > 0) S.lots = Math.min(lots, maxLots());
     S.opener = opener || document.activeElement;
     if (!S.pagant) mostraFormulari();
     full.inert = false;
@@ -70,7 +72,7 @@
   document.addEventListener('click', (e) => {
     const b = e.target.closest('[data-obre-full]');
     if (b) {
-      obre(b.dataset.obreFull || 'lot', b);
+      obre(b.dataset.obreFull || 'lot', b, Number(b.dataset.lots) || 0);
       return;
     }
     if (e.target.closest('[data-tanca-full]')) tanca();
