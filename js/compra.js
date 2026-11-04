@@ -107,19 +107,19 @@
     if (!a.ok) return '';
     if (aPart()) return 'No va per tandes. Un cop pagada, et truquem per quedar el dia.';
     if (a.motiu === 'hi-cap') {
-      if (S.producte === 'lot' && a.primera.placesLliures === S.lots) return `La teva comanda entra a la tanda ${a.tandaNumero}. Amb els teus lots, la tanda queda plena i tancada. Ara la preparem.`;
-      return `La teva comanda entra a la tanda ${a.tandaNumero}. Es tanca quan arribi a ${M.placesPerTanda()} lots o, com a molt tard, el ${C.dataCurta(a.dataLimit)}.`;
+      if (S.producte === 'lot' && a.primera.placesLliures === S.lots) return 'Amb els teus lots, la tanda queda plena i es tanca. Ara la preparem.';
+      return `Entra a la tanda oberta fins al ${C.dataCurta(a.dataLimit)}, o fins que s'ompli.`;
     }
     const lliures = a.primera.placesLliures;
     const cap = lliures > 0 ? `només hi caben ${lliures} ${lliures === 1 ? 'lot més' : 'lots més'}` : 'ja no hi caben més lots';
-    return `A la tanda ${a.primera.numero} ${cap} i en demanes ${S.lots}. Perquè t'arribi tot junt, la comanda anirà a la tanda ${a.tandaNumero}, que es tanca com a molt tard el ${C.dataCurta(a.dataLimit)}.`;
+    return `En aquesta tanda ${cap} i en demanes ${S.lots}. Perquè t'arribi tot junt, va a la tanda següent, oberta fins al ${C.dataCurta(a.dataLimit)}.`;
   }
 
   function recordatori() {
     const a = previsio();
     if (!a.ok) return '';
     if (aPart()) return "Pagues ara i et truquem per quedar el dia de l'entrega.";
-    return `Pagues ara. La comanda va a la tanda ${a.tandaNumero}, que es tanca com a molt tard el ${C.dataCurta(a.dataLimit)}. Uns ${C.diesEntrega()} dies després que es tanqui, la tens a casa. T'escrivim quan sigui en camí.`;
+    return `Pagues ara. La tanda es tanca com a molt tard el ${C.dataCurta(a.dataLimit)}, i uns ${C.diesEntrega()} dies després tens la carn a casa. T'escrivim el dia que surt.`;
   }
 
   function etiquetes() {

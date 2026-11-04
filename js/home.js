@@ -106,6 +106,13 @@
   pinta();
   M.subscriu(pinta);
 
+  // L'enllaç «Com funcionen les tandes» de la fitxa del lot porta a la pregunta i l'obre (PLA-COPY.md §1.6)
+  const pTandes = el('faq-tandes');
+  if (pTandes) {
+    $$('a[href="#faq-tandes"]').forEach((a) => a.addEventListener('click', () => { pTandes.open = true; }));
+    if (location.hash === '#faq-tandes') pTandes.open = true;
+  }
+
   // La barra del mòbil surt quan el hero ja no és a la pantalla
   const bm = el('demana-mobil');
   const hero = document.querySelector('.hero');
