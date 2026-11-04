@@ -1,6 +1,6 @@
-/* ECO Cassovall — estat compartit i regles (tandes, comandes, correus, subscripció preparada).
-   Sense interfície. Un únic estat a `localStorage['cassovall:v1']`, amb versió; si l'emmagatzematge falla, es
-   treballa en memòria. Al navegador (després de dades.js) crea `window.CassovallMagatzem`; a Node,
+/* ECO Cassovall — estat compartit i regles (tandes, comandes, correus, esdeveniments, mòduls, subscripció preparada).
+   Sense interfície. Un únic estat a `localStorage['cassovall:v2']`, amb versió (l'estat de la v1 es migra sol, sense
+   tocar-lo); si l'emmagatzematge falla, es treballa en memòria. Al navegador (després de dades.js) crea `window.CassovallMagatzem`; a Node,
    `require('./magatzem.js').crearMagatzem({...})`. Els correus guarden plantilla + dades, mai el text final. */
 (function (arrel, fabrica) {
   const esNode = typeof module === 'object' && module.exports;
@@ -14,8 +14,9 @@
 })(typeof window !== 'undefined' ? window : null, function (dadesBase) {
   'use strict';
 
-  const CLAU = 'cassovall:v1';
-  const VERSIO = 1;
+  const CLAU = 'cassovall:v2';
+  const CLAU_V1 = 'cassovall:v1'; // abans dels esdeveniments i dels mòduls: només es llegeix, per migrar-ne l'estat
+  const VERSIO = 2;
   const DIA = 86400000;
   const MAX_PLACES = 500;
 
@@ -63,6 +64,7 @@
     const dades = op.dades || dadesBase;
     const ara = op.ara || (() => new Date());
     const clau = op.clau || CLAU;
+    const clauAntiga = op.clau ? null : CLAU_V1;
     const emm = op.emmagatzematge === undefined ? emmagatzematgeNavegador() : op.emmagatzematge;
 
     let estat = null;
@@ -82,12 +84,16 @@
     const idTanda = (numero) => 't' + numero;
     const idComanda = (n) => 'CC-' + n;
     const idCorreu = (n) => 'M-' + String(n).padStart(4, '0');
+    const idEsdeveniment = (n) => 'E-' + String(n).padStart(4, '0');
+    const numeroEsdeveniment = (ev) => Number(String(ev.id).slice(2)) || 0;
 
     function configPerDefecte() {
       return {
         placesPerTanda: dades.tandes.places,
         subscripcio: !!dades.subscripcio.activaPerDefecte,
         presentacio: false,
+        // Mòduls del panell: { id: false } = apagat. Un mòdul que no hi surt és encès (afegir-ne un no demana migrar res).
+        moduls: {},
       };
     }
 
@@ -109,7 +115,7 @@
     }
 
     function llavor() {
-      const e = { versio: VERSIO, config: configPerDefecte(), tandes: [], comandes: [], correus: [], comptadors: { comanda: 1000, correu: 0 } };
+      const e = { versio: VERSIO, config: configPerDefecte(), tandes: [], comandes: [], correus: [], esdeveniments: [], dadesModuls: {}, comptadors: { comanda: 1000, correu: 0, esdeveniment: 0 } };
       const places = e.config.placesPerTanda;
       const ls = dades.llavor;
       const dia = (dies) => afegeixDies(avui(), dies);
@@ -142,7 +148,52 @@
           }
         }
       }
+      reconstrueixEsdeveniments(e);
       return e;
+    }
+
+    /* ---------- Registre d'esdeveniments ---------- */
+
+    // Un sol lloc per on entra tot el que passa al negoci: {id, data, tipus, origen, comandaId?, tandaId?, dades, vist}.
+    // `dades` ha de portar prou per escriure la frase sense buscar res més (la comanda pot canviar després).
+    function afegeixEsdeveniment(e, x) {
+      e.comptadors.esdeveniment = (e.comptadors.esdeveniment || 0) + 1;
+      const ev = { id: idEsdeveniment(e.comptadors.esdeveniment), data: x.data || iso(0), tipus: x.tipus, origen: x.origen || 'web', dades: copia(x.dades || {}), vist: !!x.vist };
+      if (x.comandaId) ev.comandaId = x.comandaId;
+      if (x.tandaId) ev.tandaId = x.tandaId;
+      e.esdeveniments.push(ev);
+      const max = dades.esdeveniments.max;
+      if (e.esdeveniments.length > max) e.esdeveniments.splice(0, e.esdeveniments.length - max);
+      return ev;
+    }
+
+    const nomComprador = (c) => (String(c.client.nom || '') + ' ' + String(c.client.cognoms || '')).trim();
+    const dadesComandaNova = (e, c) => {
+      const t = tandaDe(e, c.tandaId);
+      return { nom: nomComprador(c), producte: c.producte, lots: c.lots, tandaNumero: t ? t.numero : null };
+    };
+
+    // Per a la llavor i per migrar un estat sense registre: el que ja ha passat, deduït de les comandes i del seu
+    // historial (tot «vist», excepte les comandes encara noves).
+    function reconstrueixEsdeveniments(e) {
+      const llista = [];
+      const vistos = new Set();
+      for (const c of e.comandes) {
+        llista.push({ data: c.creada, tipus: 'comanda-nova', origen: 'web', comandaId: c.id, tandaId: c.tandaId || undefined, dades: dadesComandaNova(e, c), vist: !c.nova });
+        for (const h of c.historial || []) {
+          if (h.tipus !== 'estat-tanda') continue;
+          const clauPas = h.tandaId + '|' + h.estat + '|' + h.data;
+          if (vistos.has(clauPas)) continue;
+          vistos.add(clauPas);
+          const t = tandaDe(e, h.tandaId);
+          llista.push({ data: h.data, tipus: 'tanda-estat', origen: 'panell', tandaId: h.tandaId, dades: { numero: t ? t.numero : null, de: null, a: h.estat, correus: e.comandes.filter((x) => x.tandaId === h.tandaId).length }, vist: true });
+        }
+      }
+      llista.sort((a, b) => (a.data < b.data ? -1 : a.data > b.data ? 1 : 0)); // estable: a igual data, l'ordre de creació
+      e.comptadors = e.comptadors || {};
+      e.comptadors.esdeveniment = 0;
+      e.esdeveniments = [];
+      for (const x of llista) afegeixEsdeveniment(e, x);
     }
 
     /* ---------- Primitives sobre un estat `e` (serveixen per a l'estat real i per a simulacions) ---------- */
@@ -196,7 +247,7 @@
     function afegeixCorreu(e, plantilla, comanda, tanda, extra) {
       const x = extra || {};
       e.comptadors.correu += 1;
-      const alPastor = plantilla === 'comanda-pastor';
+      const alPastor = plantilla === 'comanda-pastor' || x.destinatari === 'pastor';
       const m = {
         id: idCorreu(e.comptadors.correu),
         plantilla,
@@ -216,6 +267,8 @@
       };
       // El correu al pastor porta l'enllaç al panell (a la comanda: `…/panell/#comanda=CC-1013`).
       if (alPastor) m.dades.enllacPanell = dades.enllacPanell(comanda.id);
+      // Dades pròpies d'un mòdul (la plantilla és seva; el text el posa el mòdul)
+      if (x.dadesExtra !== undefined) m.dades.extra = copia(x.dadesExtra);
       if (x.estatNou !== undefined) {
         m.dades.estatAnterior = x.estatAnterior;
         m.dades.estatNou = x.estatNou;
@@ -284,13 +337,14 @@
     // Manté les invariants després de qualsevol canvi: una tanda plena passa a `completa` (i avisa), una
     // `completa` que ha recuperat places torna a `oberta` (en silenci, si no l'ha tancada el pastor ni ha passat
     // la data límit) i sempre n'hi ha una que admet comandes.
-    function normalitza(e) {
+    function normalitza(e, origen) {
       const correus = [];
       for (let volta = 0; volta < 12; volta++) {
         let canvi = false;
         for (const t of e.tandes) {
           const plena = lotsDe(e, t.id) >= t.places;
           if (t.estat === 'oberta' && plena) {
+            afegeixEsdeveniment(e, { tipus: 'tanda-plena', origen: origen || 'web', tandaId: t.id, dades: { numero: t.numero, lots: lotsDe(e, t.id), places: t.places } });
             correus.push(...posaEstat(e, t, 'completa', true));
             canvi = true;
           } else if (t.estat === 'completa' && !plena && !t.tancadaManual && t.dataLimit >= avui()) {
@@ -370,9 +424,46 @@
 
     /* ---------- Persistència ---------- */
 
-    function estatValid(x) {
-      return !!x && typeof x === 'object' && x.versio === VERSIO && x.config && typeof x.config === 'object' &&
+    function estatValid(x, versio) {
+      return !!x && typeof x === 'object' && x.versio === (versio || VERSIO) && x.config && typeof x.config === 'object' &&
         Array.isArray(x.tandes) && Array.isArray(x.comandes) && Array.isArray(x.correus) && x.comptadors && typeof x.comptadors === 'object';
+    }
+
+    // Interpreta el text desat d'una clau: l'estat o null (no hi és, JSON trencat o versió que no toca).
+    function interpreta(text, versio) {
+      if (!text) return null;
+      try {
+        const x = JSON.parse(text);
+        return estatValid(x, versio) ? x : null;
+      } catch (e) {
+        return null;
+      }
+    }
+
+    // Deixa un estat desat (de qualsevol versió anterior) amb tot el que la versió actual espera. No esborra res.
+    function adapta(x) {
+      x.versio = VERSIO;
+      if (!x.config.moduls || typeof x.config.moduls !== 'object' || Array.isArray(x.config.moduls)) x.config.moduls = {};
+      if (!x.dadesModuls || typeof x.dadesModuls !== 'object' || Array.isArray(x.dadesModuls)) x.dadesModuls = {};
+      if (typeof x.comptadors.esdeveniment !== 'number') x.comptadors.esdeveniment = 0;
+      // Estats desats per versions anteriors del codi (no hi ha cap UI publicada que els tingui, però no peten).
+      delete x.config.modeTandes;
+      for (const t of x.tandes) {
+        if (t.dataLimit === undefined) t.dataLimit = t.dataSortida || dataLimitNova(x);
+        delete t.dataSortida;
+        delete t.dataGuardada;
+      }
+      for (const c of x.comandes) {
+        if (c.producte === undefined) c.producte = 'lot';
+        if (c.places === undefined) c.places = c.lots;
+        if (c.metodePagament === undefined) c.metodePagament = dades.pagament.metodes[0];
+        if (c.lliurament === undefined) {
+          const cost = dades.costEnviament(c.client && c.client.cp);
+          c.lliurament = c.tandaId && cost.valid ? cost.lliurament : null;
+        }
+      }
+      if (!Array.isArray(x.esdeveniments)) reconstrueixEsdeveniments(x);
+      return x;
     }
 
     function marcaFallada(e) {
@@ -406,30 +497,25 @@
         }
       }
       if (llegit && text) {
+        const x = interpreta(text, VERSIO);
+        if (x) {
+          estat = adapta(x);
+          return;
+        }
+      }
+      // Cap estat a la clau actual: si hi ha el de la v1 (la clau de la maqueta d'abans), s'hi continua. La clau
+      // vella no es toca: queda tal com era.
+      if (llegit && !text && clauAntiga) {
+        let vell = null;
         try {
-          const x = JSON.parse(text);
-          if (estatValid(x)) {
-            // Estats desats per versions anteriors del codi (no hi ha cap UI publicada que els tingui, però no peten).
-            delete x.config.modeTandes;
-            for (const t of x.tandes) {
-              if (t.dataLimit === undefined) t.dataLimit = t.dataSortida || dataLimitNova(x);
-              delete t.dataSortida;
-              delete t.dataGuardada;
-            }
-            for (const c of x.comandes) {
-              if (c.producte === undefined) c.producte = 'lot';
-              if (c.places === undefined) c.places = c.lots;
-              if (c.metodePagament === undefined) c.metodePagament = dades.pagament.metodes[0];
-              if (c.lliurament === undefined) {
-                const cost = dades.costEnviament(c.client && c.client.cp);
-                c.lliurament = c.tandaId && cost.valid ? cost.lliurament : null;
-              }
-            }
-            estat = x;
-            return;
-          }
+          vell = interpreta(emm.llegeix(clauAntiga), 1);
         } catch (e) {
-          /* JSON trencat: es tracta com a res */
+          /* sense clau vella */
+        }
+        if (vell) {
+          estat = adapta(vell);
+          desa();
+          return;
         }
       }
       if (!estat) estat = llavor();
@@ -598,9 +684,12 @@
         if (ordre.indexOf(nou) < ordre.indexOf(t.estat)) return err('estat_enrere');
         return muta('estat-tanda', () => {
           const tt = tandaDe(estat, id);
+          const abans = tt.estat;
           if (nou === 'completa') tt.tancadaManual = true;
           const generats = posaEstat(estat, tt, nou, false);
-          const mes = normalitza(estat);
+          // El canvi el fa el pastor: ja el coneix, per això surt com a vist
+          afegeixEsdeveniment(estat, { tipus: 'tanda-estat', origen: 'panell', tandaId: tt.id, dades: { numero: tt.numero, de: abans, a: nou, correus: generats.length }, vist: true });
+          const mes = normalitza(estat, 'panell');
           return { ok: true, tanda: vistaTanda(tt), correus: generats.concat(mes) };
         });
       },
@@ -698,6 +787,9 @@
         const metodePagament = x.metodePagament === undefined ? dades.pagament.metodes[0] : x.metodePagament;
         if (!dades.pagament.metodes.includes(metodePagament)) return err('metode_pagament_invalid', { metodePagament });
         if (!v.ok) return err('client_invalid', { errors: v.errors });
+        // D'on ve la comanda: el full de compra de la web (per defecte) o, per a un mòdul, una altra via
+        const origen = x.origen === undefined ? 'web' : x.origen;
+        if (!dades.esdeveniments.origens.includes(origen)) return err('origen_invalid', { origen });
         let sub = null;
         if (x.subscripcio) {
           if (q.producte !== 'lot') return err('subscripcio_nomes_lots');
@@ -723,7 +815,10 @@
           }
           const c = afegeixComanda(w, { client: v.client, producte: q.producte, lots, tandaId: t ? t.id : null, subscripcio: sub, nova: true, metodePagament });
           const ids = [afegeixCorreu(w, 'comanda-pastor', c, t, { motiu: 'comanda-nova' }).id, afegeixCorreu(w, 'comanda-confirmacio', c, t, { motiu: 'comanda-nova' }).id];
-          const mes = normalitza(w);
+          const dadesEv = dadesComandaNova(w, c);
+          if (x.simulat) dadesEv.simulat = true;
+          afegeixEsdeveniment(w, { tipus: 'comanda-nova', origen, comandaId: c.id, tandaId: t ? t.id : undefined, dades: dadesEv });
+          const mes = normalitza(w, origen);
           estat = w;
           return { ok: true, comanda: vistaComanda(c), assignacio: a, correus: ids.concat(mes) };
         });
@@ -758,6 +853,8 @@
         if (!estat.comandes.some((c) => c.id === id)) return err('comanda_inexistent');
         return muta('vista', () => {
           estat.comandes.find((c) => c.id === id).nova = false;
+          // L'esdeveniment de la comanda nova i el distintiu «Nova» són el mateix avís: es treuen alhora
+          estat.esdeveniments.filter((ev) => ev.comandaId === id && ev.tipus === 'comanda-nova').forEach((ev) => (ev.vist = true));
           return { ok: true };
         });
       },
@@ -766,8 +863,88 @@
           estat.comandes.forEach((c) => {
             c.nova = false;
           });
+          estat.esdeveniments.filter((ev) => ev.tipus === 'comanda-nova').forEach((ev) => (ev.vist = true));
           return { ok: true };
         }),
+
+      /* ----- Esdeveniments: tot el que passa al negoci entra per aquí (a la versió real, un webhook per origen) ----- */
+
+      // El més nou primer. filtre: { tipus (text o llista), origen, comandaId, tandaId, vist (true/false), limit }.
+      esdeveniments(filtre) {
+        const f = filtre || {};
+        const tipus = f.tipus === undefined ? null : [].concat(f.tipus);
+        const llista = estat.esdeveniments
+          .filter((ev) => (!tipus || tipus.includes(ev.tipus)) && (!f.origen || ev.origen === f.origen) && (!f.comandaId || ev.comandaId === f.comandaId) && (!f.tandaId || ev.tandaId === f.tandaId) && (f.vist === undefined || !!ev.vist === !!f.vist))
+          .sort((a, b) => (a.data < b.data ? 1 : a.data > b.data ? -1 : numeroEsdeveniment(b) - numeroEsdeveniment(a)))
+          .map(copia);
+        return f.limit ? llista.slice(0, f.limit) : llista;
+      },
+      nousEsdeveniments: () => estat.esdeveniments.filter((ev) => !ev.vist).length,
+
+      // Apunta un esdeveniment (el fa servir cada mòdul i el simulador). entrada: { tipus, origen, comandaId?, tandaId?,
+      // dades?, vist? }. No fa res més: les conseqüències (tasques, avisos) es calculen a partir del registre.
+      registraEsdeveniment(entrada) {
+        const x = entrada || {};
+        if (typeof x.tipus !== 'string' || !/^[a-z][a-z0-9-]{1,40}$/.test(x.tipus)) return err('tipus_invalid');
+        if (!dades.esdeveniments.origens.includes(x.origen)) return err('origen_invalid', { origen: x.origen });
+        carrega();
+        if (x.comandaId && !estat.comandes.some((c) => c.id === x.comandaId)) return err('comanda_inexistent');
+        if (x.tandaId && !tandaDe(estat, x.tandaId)) return err('tanda_inexistent');
+        return muta('esdeveniment', () => ({ ok: true, esdeveniment: copia(afegeixEsdeveniment(estat, x)) }));
+      },
+
+      // Marca com a vist(os). Sense filtre, tots; amb filtre (el de `esdeveniments`) o amb ids, només aquests.
+      marcaEsdevenimentsVists(quins) {
+        const q = quins || {};
+        const ids = Array.isArray(q) ? q : q.ids || null;
+        carrega();
+        const triats = estat.esdeveniments.filter((ev) => !ev.vist && (!ids || ids.includes(ev.id)) && (Array.isArray(q) || !q.tipus || [].concat(q.tipus).includes(ev.tipus)));
+        if (!triats.length) return { ok: true, n: 0 };
+        return muta('esdeveniment-vist', () => {
+          triats.forEach((t) => (estat.esdeveniments.find((ev) => ev.id === t.id).vist = true));
+          return { ok: true, n: triats.length };
+        });
+      },
+      marcaEsdevenimentVist: (id) => m.marcaEsdevenimentsVists([id]),
+
+      /* ----- Mòduls: peces que s'encenen i s'apaguen (el registre amb el seu contingut és a panell/moduls.js) ----- */
+
+      modulActiu: (id) => estat.config.moduls[id] !== false,
+      // { id: false } només per als apagats; la resta, encesos
+      modulsApagats: () => Object.keys(estat.config.moduls).filter((k) => estat.config.moduls[k] === false),
+      setModul(id, actiu) {
+        if (typeof id !== 'string' || !/^[a-z][a-z0-9-]{1,40}$/.test(id)) return err('modul_invalid', { id });
+        return muta('modul', () => {
+          if (actiu) delete estat.config.moduls[id];
+          else estat.config.moduls[id] = false;
+          return { ok: true, id, actiu: !!actiu };
+        });
+      },
+      // Dades pròpies d'un mòdul (p. ex. els kg reals o la numeració de factures), perquè no calgui tocar el model.
+      // `modulActualitza(id, fn)`: `fn` rep una còpia de les dades, la modifica i (opcional) torna {ok:false} per avortar.
+      modulDades: (id) => copia((estat.dadesModuls && estat.dadesModuls[id]) || {}),
+      modulActualitza(id, fn) {
+        if (typeof id !== 'string' || !/^[a-z][a-z0-9-]{1,40}$/.test(id) || typeof fn !== 'function') return err('modul_invalid', { id });
+        return muta('modul-dades', () => {
+          const dadesMod = copia(estat.dadesModuls[id] || {});
+          const r = fn(dadesMod);
+          if (r && r.ok === false) return r;
+          estat.dadesModuls[id] = dadesMod;
+          return { ok: true, dades: copia(dadesMod) };
+        });
+      },
+
+      // Un correu de plantilla pròpia (d'un mòdul) a una comanda. El text el posa el mòdul; aquí només es desa.
+      // entrada: { plantilla, comandaId, tandaId?, destinatari? ('comprador' per defecte | 'pastor'), motiu?, dadesExtra? }
+      registraCorreu(entrada) {
+        const x = entrada || {};
+        if (typeof x.plantilla !== 'string' || !/^[a-z][a-z0-9-]{1,40}$/.test(x.plantilla)) return err('plantilla_invalida');
+        carrega();
+        const c = estat.comandes.find((o) => o.id === x.comandaId);
+        if (!c) return err('comanda_inexistent');
+        const t = tandaDe(estat, x.tandaId || c.tandaId);
+        return muta('correu', () => ({ ok: true, correu: copia(afegeixCorreu(estat, x.plantilla, c, t, { motiu: x.motiu, destinatari: x.destinatari, dadesExtra: x.dadesExtra })) }));
+      },
 
       // Correus simulats, el més nou primer. filtre: { comandaId, tandaId, destinatari, plantilla }.
       correus(filtre) {

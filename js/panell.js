@@ -1,24 +1,30 @@
-/* Casa Camp — panell de comandes (mòbil primer). Vistes: Avui, Tandes, Comandes (amb fitxa), Transport, Correus i
-   Configuració. Llegeix i escriu l'estat compartit de js/magatzem.js; el canvi d'una altra pestanya arriba sol
-   (esdeveniment `storage`). Textos: PLA-COPY.md §3 i §4. Entrada: només amb `?presentacio` (maqueta). */
+/* Casa Camp — panell de comandes (mòbil primer). Vistes: Avui (la llista de feina), Tandes, Comandes (amb fitxa),
+   Transport, Correus i Configuració, més les dels mòduls que hi hagi encesos (panell/moduls.js). Llegeix i escriu
+   l'estat compartit de js/magatzem.js; el canvi d'una altra pestanya arriba sol (esdeveniment `storage`).
+   Textos: PLA-COPY.md §3 i §4. Entrada: només amb `?presentacio` (maqueta). */
 (function () {
   'use strict';
 
   const D = window.CassovallDades;
   const M = window.CassovallMagatzem;
   const C = window.CasaCamp;
+  const R = window.CassovallModuls; // registre de mòduls (panell/moduls.js)
+  const PWA = window.CassovallPWA || null; // service worker, instal·lació i avisos (panell/pwa.js)
   const esc = C.esc;
   const $ = (s, el) => (el || document).querySelector(s);
   const $$ = (s, el) => Array.from((el || document).querySelectorAll(s));
   const id = (x) => document.getElementById(x);
 
   const TEL = D.contacte.telefons[0];
-  const ESTATS = { oberta: 'Oberta', completa: 'Tancada', preparacio: 'En preparació', enviada: 'Enviada', entregada: 'Entregada', 'per-acordar': 'Per acordar' };
+  const ESTATS = R.ESTATS;
   const PAGAMENTS = { targeta: 'Targeta', 'apple-pay': 'Apple Pay', 'google-pay': 'Google Pay' };
-  const VISTES = ['avui', 'tandes', 'comandes', 'transport', 'correus', 'configuracio'];
+  const ORIGENS = { web: 'Web', telefon: 'Telèfon', pagament: 'Pagaments', transportista: 'Transportista', escorxador: 'Escorxador', factures: 'Factures', client: 'Client', panell: 'Tu' };
+  // Les vistes de sempre; les dels mòduls les dóna `R.vistes()`. `instalar` no és a la navegació: s'hi va des de Configuració.
+  const VISTES = ['avui', 'tandes', 'comandes', 'transport', 'correus', 'configuracio', 'instalar'];
   const filtres = { nova: false, tanda: '', estat: '', cerca: '' };
   let correusVisibles = 40;
   let tandaTransport = '';
+  let flaixPendent = null; // missatge que s'ensenya en el proper pintat (p. ex. després del simulador)
 
   const nomComplet = (c) => (c.nom + ' ' + c.cognoms).trim();
   const lotsText = (n) => C.lots(n);
@@ -130,13 +136,17 @@
       a.hidden = false;
     }
     window.addEventListener('hashchange', pinta);
+    iniciaAvisos();
     M.subscriu((info) => {
       if (!dinsApp) return;
+      avisaNous(); // l'avís del sistema surt encara que no es repinti (la pestanya pot estar amagada)
       // Un canvi d'una altra pestanya no ha de trepitjar el que s'està escrivint
       if (info.origen === 'extern' && (id('dialeg').open || (document.activeElement && /^(INPUT|SELECT|TEXTAREA)$/.test(document.activeElement.tagName)))) return;
       if (info.origen === 'local' && info.tipus === 'vista') return;
       pinta();
     });
+    if (PWA) window.addEventListener('pwa-canvi', () => { if (['instalar', 'configuracio'].includes(ruta().vista)) pinta(); });
+    iniciaSimulador();
     iniciaVistaMobil();
     pinta();
   }
@@ -147,12 +157,28 @@
     const h = decodeURIComponent(location.hash.replace(/^#/, ''));
     if (h.startsWith('comanda=')) return { vista: 'comandes', comanda: h.slice(8) };
     if (h.startsWith('tanda=')) return { vista: 'tandes', tanda: h.slice(6) };
-    return { vista: VISTES.includes(h) ? h : 'avui' };
+    return { vista: VISTES.includes(h) || R.vista(h) ? h : 'avui' };
+  }
+
+  // Les vistes dels mòduls encesos, entre «Transport/Correus» i «Configuració»
+  function pintaNavegacio() {
+    const nav = $('.app-nav');
+    $$('[data-modul]', nav).forEach((a) => a.remove());
+    const configuracio = $('[data-vista="configuracio"]', nav);
+    for (const v of R.vistes()) {
+      const a = document.createElement('a');
+      a.href = '#' + v.id;
+      a.dataset.vista = v.id;
+      a.dataset.modul = v.modul;
+      a.textContent = v.nom;
+      nav.insertBefore(a, configuracio);
+    }
   }
 
   function pinta() {
     if (marcActiu) return; // el panell es veu dins del marc; el marc pinta pel seu compte
     const r = ruta();
+    pintaNavegacio();
     $$('.app-nav a').forEach((a) => {
       const actual = a.dataset.vista === r.vista;
       if (actual) {
@@ -162,9 +188,52 @@
       } else a.removeAttribute('aria-current');
     });
     const v = id('vista');
-    const fet = r.comanda ? fitxa(r.comanda) : r.tanda ? vistaTanda(r.tanda) : { avui, tandes, comandes, transport, correus, configuracio }[r.vista]();
+    const propia = { avui, tandes, comandes, transport, correus, configuracio, instalar }[r.vista];
+    const fet = r.comanda ? fitxa(r.comanda) : r.tanda ? vistaTanda(r.tanda) : propia ? propia() : vistaDeModul(r.vista);
     v.innerHTML = fet.html;
     if (fet.despres) fet.despres(v);
+    if (flaixPendent) {
+      flaix(flaixPendent);
+      flaixPendent = null;
+    }
+  }
+
+  // La vista d'un mòdul: ell posa el contingut (`render(ctx)` torna { html, despres? })
+  function vistaDeModul(vistaId) {
+    const x = R.vista(vistaId);
+    let fet = null;
+    try {
+      fet = x && x.render(R.ctx);
+    } catch (e) {
+      console.error('Mòdul «' + (x && x.modul) + '»: ' + e.message);
+    }
+    return fet && typeof fet.html === 'string' ? fet : { html: '<h2>Aquesta vista no es pot mostrar</h2>' };
+  }
+
+  // Les seccions que els mòduls encesos posen dins d'una vista (`on`: 'tanda', 'comanda', 'comandes', 'avui', 'configuracio')
+  function seccionsHTML(on, objecte) {
+    return R.seccions(on)
+      .map((s) => {
+        let h = '';
+        try {
+          h = s.html(R.ctx, objecte);
+        } catch (e) {
+          console.error('Mòdul «' + s.modul + '»: ' + e.message);
+        }
+        return h ? `<div class="seccio-modul" data-modul-seccio="${esc(s.modul)}" data-seccio="${esc(s.id)}">${h}</div>` : '';
+      })
+      .join('');
+  }
+  function seccionsDespres(v, on, objecte) {
+    for (const s of R.seccions(on)) {
+      const el = $(`[data-modul-seccio="${s.modul}"][data-seccio="${s.id}"]`, v);
+      if (!el || typeof s.despres !== 'function') continue;
+      try {
+        s.despres(el, R.ctx, objecte);
+      } catch (e) {
+        console.error('Mòdul «' + s.modul + '»: ' + e.message);
+      }
+    }
   }
 
   function flaix(text) {
@@ -193,20 +262,51 @@
 
   /* ---------- Avui ---------- */
 
-  function avisosTanda() {
-    const act = M.tandaActual();
-    const seg = act ? act.numero : '';
-    const tandes = M.tandes();
-    const avisos = [];
-    // Només l'última tanda tancada, i només si s'ha tancat sola perquè s'ha omplert (si no, l'avís seria d'una tanda vella)
-    const ultimaTancada = tandes.filter((t) => t.estat === 'completa').pop();
-    const ultimaAuto = ultimaTancada && !ultimaTancada.tancadaManual && ultimaTancada.ocupacio.plena ? ultimaTancada : null;
-    if (ultimaAuto) avisos.push(`La tanda ${ultimaAuto.numero} és plena i s’ha tancat. Ja és oberta la tanda ${seg}.`);
-    for (const t of tandes.filter((x) => x.vencuda)) {
-      avisos.push(`La tanda ${t.numero} ha passat la data límit (${dataCurta(t.dataLimit)}) amb ${t.ocupacio.lots} de ${t.ocupacio.places} lots. Ja no admet comandes: passa-la a «Tancada» a Tandes per avisar els compradors. Ja és oberta la tanda ${seg}.`);
-    }
-    return avisos;
+  /* ---------- Avisos del sistema (mòdul «avisos») ---------- */
+  // Quan entra un esdeveniment que té avís (una comanda, una tanda plena…), surt una notificació del sistema.
+  // El permís es demana amb un botó (Configuració), mai en carregar. Si el mòdul és apagat, no surt res.
+  // A la maqueta només n'hi ha mentre el panell és obert (en una pestanya o a la pantalla d'inici): les comandes
+  // arriben pel mateix navegador. A la versió real seria Web Push (servidor).
+  let coneguts = null; // ids d'esdeveniments que ja hi eren o que ja han avisat
+
+  function iniciaAvisos() {
+    coneguts = new Set(M.esdeveniments().map((ev) => ev.id));
   }
+
+  function avisaNous() {
+    if (!coneguts) return;
+    const nous = M.esdeveniments().filter((ev) => !coneguts.has(ev.id)).reverse();
+    nous.forEach((ev) => coneguts.add(ev.id));
+    if (!PWA || !R.actiu('avisos')) return;
+    for (const ev of nous) {
+      const a = R.avisEsdeveniment(ev);
+      if (a) PWA.mostra({ titol: a.titol, cos: a.cos, hash: a.hash, tag: ev.id });
+    }
+  }
+
+  // La targeta de Configuració que posa el mòdul «avisos» (la declara panell/moduls.js)
+  const avisosUI = {
+    html() {
+      if (!PWA) return '';
+      const p = PWA.permis();
+      let cos;
+      if (p === 'no-suportat') cos = '<p>Aquest navegador no pot mostrar avisos.</p>';
+      else if (p === 'denied') cos = '<p>Els avisos estan bloquejats. Els pots tornar a permetre als ajustos del navegador.</p>';
+      else if (p === 'granted') cos = '<p>Els avisos estan activats: et sortirà un avís quan entri una comanda o s’ompli una tanda.</p><button type="button" class="boto boto-lleu" data-avisos="prova">Prova un avís</button>';
+      else cos = '<p>Quan entri una comanda o s’ompli una tanda, et sortirà un avís al mòbil.</p><button type="button" class="boto" data-avisos="activa">Activa els avisos</button>';
+      const ios = p !== 'no-suportat' && PWA.esIOS() && !PWA.instalada() ? '<p class="fila-detall">A l’iPhone només funcionen amb el panell a la pantalla d’inici. <a href="#instalar">Com es fa</a></p>' : '';
+      return `<section class="targeta" id="avisos-targeta"><h3>Avisos al mòbil</h3>${cos}${ios}</section>`;
+    },
+    despres(el) {
+      const activa = $('[data-avisos="activa"]', el);
+      if (activa) activa.addEventListener('click', async () => { await PWA.demana(); pinta(); });
+      const prova = $('[data-avisos="prova"]', el);
+      if (prova) prova.addEventListener('click', async () => {
+        const fet = await PWA.mostra({ titol: 'Avís de prova', cos: 'Així et sortiran els avisos.', hash: '#avui', tag: 'prova-' + Date.now() });
+        flaix(fet ? 'Avís enviat.' : 'No s’ha pogut enviar l’avís.');
+      });
+    },
+  };
 
   function filaComanda(c, boto) {
     return `<li class="fila">
@@ -218,10 +318,25 @@
     </li>`;
   }
 
+  function filaTasca(t) {
+    const boto = typeof t.boto.hash === 'string'
+      ? `<a class="boto" href="${esc(t.boto.hash)}">${esc(t.boto.text)}</a>`
+      : `<button type="button" class="boto" data-tasca="${esc(t.id)}">${esc(t.boto.text)}</button>`;
+    return `<li class="tasca tasca-${esc(t.prioritat)}" data-tasca-id="${esc(t.id)}" data-modul="${esc(t.modul)}">
+      <span class="fila-text"><span class="fila-nom"><strong>${esc(t.titol)}</strong></span>${t.detall ? `<span class="fila-detall">${esc(t.detall)}</span>` : ''}</span>
+      ${boto}
+    </li>`;
+  }
+
+  function filaPassat(ev) {
+    return `<li class="passat${ev.vist ? '' : ' passat-nou'}">
+      <span class="passat-quan">${esc(C.dataHora(ev.data))} · ${esc(ORIGENS[ev.origen] || ev.origen)}${ev.vist ? '' : ' <span class="distintiu">Nou</span>'}</span>
+      <span>${esc(R.textEsdeveniment(ev))}</span>
+    </li>`;
+  }
+
   function avui() {
     const t = M.tandaActual();
-    const noves = M.comandes({ nova: true });
-    const avisos = avisosTanda().map((a) => `<p class="avis-tanda">${esc(a)}</p>`).join('');
     let tanda = '<p>Encara no hi ha cap tanda oberta.</p>';
     if (t) {
       const o = t.ocupacio;
@@ -231,24 +346,94 @@
         <p class="comptador">${o.lots} de ${o.places} lots · en falten ${o.lliures}</p>
       </a>`;
     }
-    // El pas següent de cada tanda que no és oberta ni entregada (o que és oberta però ha passat la data límit)
-    const pendents = M.tandes().filter((x) => x.estat !== 'entregada' && (x.estat !== 'oberta' || x.vencuda)).reverse()
-      .map((x) => ({ x, seg: M.estatsPossibles(x.id)[0] })).filter((p) => p.seg);
-    const feina = pendents.length
-      ? `<section><h3>Pendent de fer</h3><ul class="fileres">${pendents.map(({ x, seg }) => `<li class="fila">
-          <span class="fila-text"><span class="fila-nom"><strong>Tanda ${x.numero}</strong></span><span class="fila-detall">${esc(estatTanda(x))}</span></span>
-          <button type="button" class="boto boto-sec" data-pendent="${esc(x.id)}" data-seg="${seg}">Passa a «${ESTATS[seg]}»</button>
-        </li>`).join('')}</ul></section>`
-      : '';
-    const html = `<h2>Avui</h2>${caixaFlaix}${avisos}${feina}
+    // La llista de feina es calcula cada vegada (R.tasques): surt de les tandes, de les comandes i dels esdeveniments
+    const tasques = R.tasques();
+    const passat = M.esdeveniments({ limit: 80 }).filter(R.esdevenimentVisible).slice(0, 8);
+    const nous = passat.filter((ev) => !ev.vist).length;
+    const html = `<h2>Avui</h2>${caixaFlaix}
       ${t ? tanda : `<section class="targeta">${tanda}</section>`}
-      <section>
-        <h3>Comandes noves (${noves.length})</h3>
-        ${noves.length ? `<ul class="fileres">${noves.map((c) => filaComanda(c, true)).join('')}</ul>` : '<p class="buit">Avui no ha entrat cap comanda nova.</p>'}
-      </section>`;
+      <section id="per-fer">
+        <h3>Per fer (${tasques.length})</h3>
+        ${tasques.length ? `<ul class="fileres tasques">${tasques.map(filaTasca).join('')}</ul>` : '<p class="buit">Avui no tens res per fer.</p>'}
+      </section>
+      <section id="ha-passat">
+        <h3>Ha passat</h3>
+        ${passat.length ? `<ul class="passats">${passat.map(filaPassat).join('')}</ul>` : '<p class="buit">Encara no ha passat res.</p>'}
+        ${nous ? '<button type="button" class="boto boto-lleu" id="passat-vist">Marca-ho tot com a vist</button>' : ''}
+      </section>
+      ${seccionsHTML('avui')}`;
     return { html, despres: (v) => {
       fixaBarres(v);
-      $$('[data-pendent]', v).forEach((b) => b.addEventListener('click', () => canviaEstat(M.tanda(b.dataset.pendent), b.dataset.seg)));
+      $$('[data-tasca]', v).forEach((b) => b.addEventListener('click', () => {
+        const feta = tasques.find((x) => x.id === b.dataset.tasca);
+        if (feta) R.executa(feta, ui);
+      }));
+      const vist = id('passat-vist');
+      if (vist) vist.addEventListener('click', () => M.marcaEsdevenimentsVists());
+      seccionsDespres(v, 'avui');
+    } };
+  }
+
+  /* ---------- Simulador d'esdeveniments (només amb `?presentacio`) ---------- */
+  // Per ensenyar la maqueta a la reunió: dispara el que faria el negoci de veritat (una comanda per la web, una tanda
+  // plena…) i es veu com reacciona el panell. La llista la fan els mòduls (`esdeveniments.*.simulador`).
+
+  function iniciaSimulador() {
+    const b = id('simulador');
+    if (!b || !M.presentacio()) return;
+    b.hidden = false;
+    b.addEventListener('click', obreSimulador);
+  }
+
+  function obreSimulador() {
+    const sims = R.simulacions();
+    const cos = `<p class="fila-detall">Només per ensenyar el panell: fa el mateix que faria el negoci de veritat.</p>
+      <ul class="simulacions">${sims.map((s) => `<li><button type="button" class="boto boto-lleu" data-sim="${esc(s.id)}">${esc(s.text)}</button></li>`).join('')}</ul>`;
+    const d = dialeg('Simulador', cos, [{ text: 'Tanca', primari: true }]);
+    $$('[data-sim]', d).forEach((b) =>
+      b.addEventListener('click', () => {
+        const s = R.simulacions().find((x) => x.id === b.dataset.sim);
+        d.close();
+        if (!s) return;
+        let r;
+        try {
+          r = s.dispara(R.ctx);
+        } catch (e) {
+          console.error('Simulador «' + s.id + '»: ' + e.message);
+          r = { ok: false, text: 'No s’ha pogut fer.' };
+        }
+        flaixPendent = r.text;
+        ui.navega('#avui');
+      }),
+    );
+  }
+
+  /* ---------- Posa-la a la pantalla d'inici ---------- */
+
+  function instalar() {
+    const ja = PWA && PWA.instalada();
+    const pot = PWA && PWA.instalable();
+    const html = `<a class="enrere" href="#configuracio">Configuració</a>
+      <h2>Posa-la a la pantalla d’inici</h2>
+      ${ja ? '<p class="flaix">Ja la tens a la pantalla d’inici.</p>' : ''}
+      <p>Així s’obre com una aplicació, a pantalla completa, i hi tornes d’un toc.</p>
+      ${pot ? '<button type="button" class="boto" id="instala">Instal·la-la ara</button>' : ''}
+      <section class="targeta"><h3>iPhone</h3><ol class="passos-instal">
+        <li>Obre aquesta pàgina amb Safari.</li>
+        <li>Toca el botó de compartir: el quadrat amb una fletxa cap amunt.</li>
+        <li>Baixa i toca «Afegeix a la pantalla d’inici».</li>
+        <li>Toca «Afegeix», a dalt a la dreta.</li>
+      </ol></section>
+      <section class="targeta"><h3>Android</h3><ol class="passos-instal">
+        <li>Obre aquesta pàgina amb Chrome.</li>
+        <li>Toca els tres punts de dalt a la dreta.</li>
+        <li>Toca «Instal·la l’aplicació» o «Afegeix a la pantalla d’inici».</li>
+        <li>Confirma amb «Instal·la».</li>
+      </ol></section>
+      <p class="buit">A l’iPhone, els avisos només funcionen amb el panell a la pantalla d’inici (cal l’iOS 16.4 o més nou).</p>`;
+    return { html, despres: () => {
+      const b = id('instala');
+      if (b) b.addEventListener('click', () => PWA.installa());
     } };
   }
 
@@ -340,9 +525,11 @@
       <section><h3>Transport</h3>
         <div class="accions"><button type="button" class="boto boto-lleu" id="imprimeix">Imprimeix</button><button type="button" class="boto boto-lleu" id="csv">Baixa-la en Excel (CSV)</button></div>
         ${blocTransport(t.id)}
-      </section>`;
+      </section>
+      ${seccionsHTML('tanda', t)}`;
     return { html, despres: (v) => {
       fixaBarres(v);
+      seccionsDespres(v, 'tanda', t);
       const on = (acc, fn) => {
         const b = $(`[data-accio="${acc}"]`, v);
         if (b) b.addEventListener('click', () => fn(b));
@@ -450,7 +637,8 @@
 
   function comandes() {
     const t = M.tandes().slice().reverse();
-    const html = `<h2>Comandes</h2>
+    const html = `<h2>Comandes</h2>${caixaFlaix}
+      ${seccionsHTML('comandes')}
       <div class="filtres">
         <div class="filtre-parell" role="group" aria-label="Quines comandes">
           <button type="button" class="boto boto-lleu" data-nova="0" aria-pressed="${!filtres.nova}">Totes</button>
@@ -462,6 +650,7 @@
       </div>
       <div id="llista-comandes" aria-live="polite"></div>`;
     return { html, despres: (v) => {
+      seccionsDespres(v, 'comandes');
       const llista = () => {
         const tot = M.comandes();
         const r = M.comandes({ nova: filtres.nova ? true : undefined, tandaId: filtres.tanda || undefined, estat: filtres.estat || undefined, cerca: filtres.cerca || undefined });
@@ -514,7 +703,7 @@
     const tel = k.telefon.replace(/[^\d+]/g, '');
     const wa = 'https://wa.me/' + (tel.startsWith('+') ? tel.slice(1) : '34' + tel);
     const env = C.importEnviament(c);
-    const rebuts = M.correus({ comandaId: c.id, destinatari: 'comprador' });
+    const rebuts = M.correus({ comandaId: c.id, destinatari: 'comprador' }).filter(R.correuVisible);
     const dl = (parelles) => `<dl class="dades">${parelles.filter((p) => p[1] !== '').map(([a, b]) => `<div><dt>${a}</dt><dd>${b}</dd></div>`).join('')}</dl>`;
     const lliurament = { 'repartiment-propi': 'El repartim nosaltres', transportista: 'Transportista' }[c.lliurament] || 'Per acordar';
     const mou = c.tandaId && c.estat !== 'enviada' && c.estat !== 'entregada';
@@ -546,9 +735,11 @@
         ['Pagament', `${esc(PAGAMENTS[c.metodePagament] || c.metodePagament)} · pagat`],
       ])}</section>
       <section class="targeta"><h3>Historial</h3><ul class="historial">${c.historial.map((h) => `<li>${esc(historialText(h))}</li>`).join('')}</ul></section>
-      <section class="targeta"><h3>Correus rebuts</h3>${rebuts.length ? `<ul class="fileres">${rebuts.map((m) => filaCorreu(m, false)).join('')}</ul>` : '<p class="buit">Encara no ha rebut cap correu.</p>'}</section>`;
+      <section class="targeta"><h3>Correus rebuts</h3>${rebuts.length ? `<ul class="fileres">${rebuts.map((m) => filaCorreu(m, false)).join('')}</ul>` : '<p class="buit">Encara no ha rebut cap correu.</p>'}</section>
+      ${seccionsHTML('comanda', c)}`;
     return { html, despres: (v) => {
       lligaCorreus(v);
+      seccionsDespres(v, 'comanda', c);
       const b = id('mou');
       if (b) b.addEventListener('click', () => mouComanda(c));
       if (c.nova) M.marcaVista(c.id);
@@ -732,7 +923,8 @@
       case 'tanda-entregada':
         return { assumpte: 'Ja tens la comanda a casa', cos: [`Hola, ${k.nom}:`, '', 'La teva comanda ja s’ha entregat. Si hi ha res que no estigui bé, truca’ns.', '', 'Gràcies per comprar-nos directament.', '', SIGNATURA].join('\n') };
       default:
-        return { assumpte: m.plantilla, cos: '' };
+        // Una plantilla d'un mòdul: el text el posa el mòdul (panell/moduls.js, `correus[].text`)
+        return R.textCorreu(m) || { assumpte: m.plantilla, cos: '' };
     }
   }
 
@@ -761,7 +953,7 @@
   }
 
   function correus() {
-    const tots = M.correus();
+    const tots = M.correus().filter(R.correuVisible);
     const visibles = tots.slice(0, correusVisibles);
     const html = `<h2>Correus</h2>
       ${tots.length ? `<ul class="fileres">${visibles.map((m) => filaCorreu(m, true)).join('')}</ul>${tots.length > visibles.length ? '<button type="button" class="boto boto-lleu" id="mes-correus">Mostra’n més</button>' : ''}` : '<p class="buit">Encara no s’ha enviat cap correu.</p>'}`;
@@ -783,8 +975,27 @@
           <button type="submit" class="boto">Desa</button>
         </form>
       </section>
+      <section class="targeta" id="moduls">
+        <h3>Mòduls</h3>
+        <p class="buit">Apaga el que no vulguis: desapareix de tot arreu i no es perd res. Quan l’encenguis, torna.</p>
+        <ul class="moduls">${R.llista().map((m) => `<li class="modul" data-modul="${esc(m.id)}">
+          <span class="fila-text"><span class="fila-nom"><strong id="modul-nom-${esc(m.id)}">${esc(m.nom)}</strong>${m.pendent ? ' <span class="distintiu distintiu-pendent">Pendent del pastor</span>' : ''}</span><span class="fila-detall">${esc(m.descripcio || '')}</span></span>
+          <button type="button" class="interruptor" role="switch" aria-checked="${R.actiu(m.id)}" aria-labelledby="modul-nom-${esc(m.id)}" data-modul-interruptor="${esc(m.id)}"></button>
+        </li>`).join('')}</ul>
+      </section>
+      ${seccionsHTML('configuracio')}
+      <section class="targeta"><h3>Web instal·lable</h3><p>Posa el panell a la pantalla d’inici del mòbil.</p><a class="boto boto-lleu" href="#instalar">Com es fa</a></section>
       <section class="targeta"><button type="button" class="boto boto-lleu" id="restableix">Restableix les dades d’exemple</button></section>`;
-    return { html, despres: () => {
+    return { html, despres: (v) => {
+      seccionsDespres(v, 'configuracio');
+      $$('[data-modul-interruptor]', v).forEach((b) =>
+        b.addEventListener('click', () => {
+          const idModul = b.dataset.modulInterruptor;
+          const volEncendre = !R.actiu(idModul);
+          M.setModul(idModul, volEncendre); // el subscriptor repinta
+          flaix(`${R.modul(idModul).nom}: ${volEncendre ? 'encès' : 'apagat'}.`);
+        }),
+      );
       id('f-config').addEventListener('submit', (e) => {
         e.preventDefault();
         const n = Number(id('c-places').value);
@@ -817,6 +1028,24 @@
       );
     } };
   }
+
+  // El que reben les funcions dels mòduls (tasques, accions, seccions) per tocar la interfície del panell
+  const ui = {
+    canviaEstat,
+    navega: (hash) => {
+      if (location.hash === hash) pinta();
+      else location.hash = hash;
+    },
+    flaix,
+    dialeg,
+    cancela,
+    esc,
+    repinta: pinta,
+  };
+  R.ctx.ui = ui;
+  R.ctx.avisos = avisosUI;
+  // Per a les proves i per als mòduls nous: repintar després de registrar-ne un
+  window.CassovallPanell = { repinta: pinta, ui };
 
   arrenca();
 })();

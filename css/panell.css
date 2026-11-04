@@ -145,13 +145,50 @@ body.app{--x-app:calc(max(0px,(100% - 960px) / 2) + var(--marge-x))}
   .filtres .accions{grid-column:span 2}
 }
 
+/* ---------- Avui: llista de feina i «Ha passat» ---------- */
+/* La vora de l'esquerra diu l'ordre: granat = bloqueja diners o entregues, fosc = té data, gris = informatiu */
+.tasques .tasca{padding-left:1.1rem;box-shadow:inset 4px 0 0 var(--linia)}
+.tasques .tasca-bloqueja{box-shadow:inset 4px 0 0 var(--cta)}
+.tasques .tasca-data{box-shadow:inset 4px 0 0 var(--fosc)}
+.passats{list-style:none;margin:0;padding:0;display:grid;gap:.5rem}
+.passats li{display:grid;gap:.1rem;padding:.55rem .9rem;background:var(--bloc);border-radius:6px;overflow-wrap:anywhere}
+.passat-quan{color:var(--text-2);font-size:var(--t-petit)}
+.passats .passat-nou{box-shadow:inset 3px 0 0 var(--cta)}
+#ha-passat>.boto{margin-top:.8rem}
+@media (max-width:600px){
+  /* Una tasca, a mòbil: el text a dalt i el botó a sota, a tota l'amplada */
+  .tasques .tasca{flex-direction:column;align-items:stretch}
+}
+
+/* ---------- Simulador (només amb ?presentacio): un botó discret a la capçalera ---------- */
+.simulador-boto{margin-left:auto;min-height:44px;padding:.3rem .8rem;border:1px solid var(--sobre-fosc-2);border-radius:999px;background:transparent;color:var(--sobre-fosc-2);font:600 .85rem var(--f-cos);cursor:pointer;opacity:.8}
+.simulador-boto:not([hidden])+.vista-mobil{margin-left:0}
+.simulador-boto:focus-visible{outline:3px solid var(--sobre-fosc);outline-offset:3px;opacity:1}
+@media (hover:hover){.simulador-boto:hover{opacity:1;background:rgba(255,255,255,.12)}}
+.dins-marc .simulador-boto{display:none}
+.simulacions{list-style:none;margin:.8rem 0 0;padding:0;display:grid;gap:.5rem}
+.simulacions .boto{width:100%;justify-content:flex-start}
+
+/* ---------- Configuració: mòduls i avisos ---------- */
+.moduls{list-style:none;margin:.4rem 0 0;padding:0;display:grid}
+.modul{display:flex;align-items:center;justify-content:space-between;gap:.8rem;padding:.8rem 0;border-top:1px solid var(--linia)}
+.distintiu-pendent{background:var(--tria);color:var(--cta-fosc);font-weight:600}
+.interruptor{flex:none;position:relative;width:4.2rem;height:44px;padding:0;border:1.5px solid var(--vora);border-radius:999px;background:var(--suau);cursor:pointer}
+.interruptor::after{content:"";position:absolute;top:50%;left:.45rem;width:1.7rem;height:1.7rem;margin-top:-.85rem;border-radius:50%;background:var(--text)}
+.interruptor[aria-checked="true"]{background:var(--fosc);border-color:var(--fosc)}
+.interruptor[aria-checked="true"]::after{left:calc(100% - 2.15rem);background:#fff}
+.interruptor:focus-visible{outline:3px solid var(--cta);outline-offset:3px}
+.seccio-modul .targeta>*+*,#moduls>*+*{margin-top:.7rem}
+.seccio-modul .targeta p,#moduls>p{margin:0}
+.passos-instal{margin:0;padding-left:1.4rem;display:grid;gap:.5rem}
+
 /* L'atribut hidden ha de guanyar als display d'aquest fitxer (.acces, .flaix…) */
 [hidden]{display:none}
 
 /* ---------- Impressió (llistes del transport) ---------- */
 @media print{
   body.app{background:#fff}
-  .app-cap,.app-nav,.app-avis,.accions,.filtres .camp-pla,.enrere,.dialeg,.no-imprimeix{display:none}
+  .app-cap,.app-nav,.app-avis,.accions,.filtres .camp-pla,.enrere,.dialeg,.no-imprimeix,.seccio-modul{display:none}
   .app-vista{max-width:none;padding:0}
   .targeta{padding:0;border-radius:0}
   .taula th,.taula td{border-bottom:1px solid #000}

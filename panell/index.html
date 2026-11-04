@@ -8,6 +8,12 @@
 <link rel="icon" href="../assets/favicon.ico" sizes="any">
 <link rel="icon" type="image/png" sizes="32x32" href="../assets/favicon-32.png">
 <link rel="apple-touch-icon" href="../assets/apple-touch-icon.png">
+<link rel="manifest" href="manifest.webmanifest">
+<meta name="theme-color" content="#2C3A42">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Casa Camp">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <link rel="stylesheet" href="../css/styles.css">
 <link rel="stylesheet" href="../css/panell.css">
 </head>
@@ -24,6 +30,7 @@
   <header class="app-cap">
     <a href="../" class="app-logo" id="app-logo"><img src="../assets/logo.png" alt="Casa Camp" width="256" height="256"></a>
     <p class="app-titol">Panell de comandes</p>
+    <button type="button" class="simulador-boto" id="simulador" hidden>Simulador</button>
     <button type="button" class="vista-mobil" id="vista-mobil" role="switch" aria-checked="false">Vista mòbil</button>
   </header>
   <nav class="app-nav" aria-label="Seccions del panell">
@@ -45,6 +52,8 @@
 <script src="../js/dades.js"></script>
 <script src="../js/magatzem.js"></script>
 <script src="../js/comu.js"></script>
+<script src="pwa.js"></script>
+<script src="moduls.js"></script>
 <script src="../js/panell.js"></script>
 </body>
 </html>

@@ -99,6 +99,14 @@
         whatsapp: { actiu: false, implementat: false },
       },
 
+      // Registre d'esdeveniments del panell (PLA.md §«Panell connectat»). `origens`: d'on pot venir un esdeveniment;
+      // a la versió real, cada origen és un webhook que escriu el mateix registre. `panell` és el que fa el pastor
+      // des del panell (canviar l'estat d'una tanda). `max`: els més antics s'esborren per no omplir el navegador.
+      esdeveniments: {
+        origens: ['web', 'telefon', 'pagament', 'transportista', 'escorxador', 'factures', 'client', 'panell'],
+        max: 500,
+      },
+
       // Enllaç al panell que porta el correu al pastor. `urlBase` és un marcador fins que hi hagi domini.
       panell: { urlBase: '[DOMINI]', ruta: '/panell/' },
 
