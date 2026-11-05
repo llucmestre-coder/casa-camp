@@ -52,7 +52,7 @@
     if (!S.pagant) mostraFormulari();
     full.inert = false;
     document.body.classList.add('full-obert');
-    render();
+    Moviment.silenci(render); // en obrir, els valors ja són al seu lloc: res no s'hi mou
     setTimeout(() => $('.tanca', full).focus({ focusVisible: false }), 50);
   }
 
@@ -112,7 +112,7 @@
     }
     const lliures = a.primera.placesLliures;
     const cap = lliures > 0 ? `només hi caben ${lliures} ${lliures === 1 ? 'lot més' : 'lots més'}` : 'ja no hi caben més lots';
-    return `En aquesta tanda ${cap} i en demanes ${S.lots}. Perquè t'arribi tot junt, va a la tanda següent, oberta fins al ${C.dataCurta(a.dataLimit)}.`;
+    return `En aquesta tanda ${cap} i en demanes ${S.lots}. ${C.fraseTandaSeguent(a.dataLimit)}`;
   }
 
   function recordatori() {
@@ -147,12 +147,12 @@
     el('full-titol').textContent = TITOLS[S.producte];
     el('pas-1-titol').textContent = lot ? '1. Quants lots vols' : '1. Què demanes';
     el('quant').hidden = !lot;
-    el('q-num').textContent = S.lots;
-    el('q-unitat').textContent = S.lots === 1 ? 'lot de 5 kg' : `lots, ${S.lots * D.lot.kg} kg`;
+    Moviment.text(el('q-num'), S.lots, 'balanca');
+    Moviment.text(el('q-unitat'), S.lots === 1 ? 'lot de 5 kg' : `lots, ${S.lots * D.lot.kg} kg`);
     el('q-menys').disabled = S.lots <= 1;
     el('q-mes').disabled = S.lots >= maxLots();
     const e = etiquetes();
-    el('q-resum').innerHTML = lot ? `${C.lots(S.lots)} · ${esc(e.preu)} <span>(cada lot, ${D.lot.kg} kg)</span>` : `${esc(NOMS_CANAL[S.producte])} · ${esc(e.preu)}`;
+    Moviment.html(el('q-resum'), lot ? `${C.lots(S.lots)} · ${esc(e.preu)} <span>(cada lot, ${D.lot.kg} kg)</span>` : `${esc(NOMS_CANAL[S.producte])} · ${esc(e.preu)}`);
     const alMaxim = lot && S.lots >= maxLots();
     el('q-max').hidden = !alMaxim;
     if (alMaxim) el('q-max').textContent = `En una comanda hi caben com a màxim ${maxLots()} lots.`;
@@ -162,10 +162,11 @@
     if (S.construit) actualitzaPas3();
   }
 
-  function renderDesglos() {
+  // `mode`: 'suau' (només la xifra, quan canvia la quantitat) o 'balanca' (l'enviament i el total, quan el codi postal és complet)
+  function renderDesglos(mode) {
     const e = etiquetes();
-    el('d-lots').textContent = e.concepte;
-    el('d-lots-imp').textContent = e.preu;
+    Moviment.text(el('d-lots'), e.concepte);
+    Moviment.text(el('d-lots-imp'), e.preu);
     let env = 'Posa el codi postal i te’l calculem';
     let nota = '';
     if (aPart()) {
@@ -176,8 +177,8 @@
       env = e.env.gratis ? 'Gratis' : e.env.etiqueta;
       nota = e.env.gratis ? 'Te la portem nosaltres mateixos, sense cap cost.' : 'Te la porta un transportista, refrigerada.';
     }
-    el('d-env').textContent = env;
-    el('d-total').textContent = e.total || '—';
+    Moviment.text(el('d-env'), env, mode);
+    Moviment.text(el('d-total'), e.total || '—', mode);
     el('d-nota').textContent = nota;
   }
 
@@ -248,7 +249,7 @@
     input.addEventListener('input', () => {
       if (input.closest('.camp').classList.contains('amb-error') && !erroresClient()[c]) posaError(c, null);
       if (c === 'cp') {
-        renderDesglos();
+        renderDesglos('balanca');
         if (S.construit) actualitzaPas3();
       }
     });
@@ -505,20 +506,23 @@
       <p>Si has de canviar alguna cosa, truca’ns al ${esc(TEL)}.</p>
       ${avisStorage}
       <button type="button" class="boto boto-ample" data-tanca-full>Tanca</button>`;
-    // Primer es buida el formulari (mentre és al DOM: els camps es busquen per id) i després es canvia la vista
-    form.reset();
-    camps.forEach((k) => posaError(k, null));
-    S.pas3 = false;
-    S.lots = 1;
-    S.metode = 'targeta';
-    S.construit = false;
-    el('pas-3').hidden = true;
-    el('pas-3-cos').innerHTML = '';
-    el('continua').hidden = false;
-    el('avis-errors').hidden = true;
-    cos.replaceChildren(vista);
-    full.scrollTop = 0;
-    $('#conf-titol').focus();
+    // El pagament marxa cap a l'esquerra i la confirmació entra per la dreta (js/moviment.js); al final es fa el canvi
+    Moviment.confirmacio(cos, form, vista, () => {
+      // Primer es buida el formulari (mentre és al DOM: els camps es busquen per id) i després es canvia la vista
+      form.reset();
+      camps.forEach((k) => posaError(k, null));
+      S.pas3 = false;
+      S.lots = 1;
+      S.metode = 'targeta';
+      S.construit = false;
+      el('pas-3').hidden = true;
+      el('pas-3-cos').innerHTML = '';
+      el('continua').hidden = false;
+      el('avis-errors').hidden = true;
+      cos.replaceChildren(vista);
+      full.scrollTop = 0;
+      $('#conf-titol').focus();
+    });
   }
 
   // Torna al formulari (després d'una confirmació, o en reobrir el full)

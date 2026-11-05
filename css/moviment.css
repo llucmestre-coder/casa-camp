@@ -1,0 +1,67 @@
+/* Casa Camp — moviment (criteri general del 04/11/2026, CLAUDE.md §«Criteri general de moviment»).
+   Aquí hi ha tot l'estil del moviment; la part que cal calcular és a js/moviment.js.
+   Regles: res no es mou en entrar (només la barra de la tanda); la resposta és la «Balança» (el valor nou entra i passa
+   de llarg com a molt 3 px); tot alhora; un sol tempo; amb prefers-reduced-motion no es mou res. */
+
+:root{
+  /* UN SOL PARÀMETRE: multiplica totes les durades de la web (2 = el doble de lent, 0 = res no es mou).
+     js/moviment.js el llegeix per a les animacions que fa amb JavaScript. */
+  --tempo:1;
+  --corba:cubic-bezier(.2,.8,.2,1); /* la del full de compra */
+}
+
+/* ---------- Durades que ja hi eren a styles.css, multiplicades pel tempo ----------
+   (A la web de veritat es canvien directament a styles.css; aquí es redeclaren perquè styles.css no es toca.) */
+.vel{transition:opacity calc(.25s * var(--tempo))}
+.full{transition:transform calc(.32s * var(--tempo)) var(--corba),visibility 0s calc(.32s * var(--tempo))}
+body.full-obert .full{transition:transform calc(.32s * var(--tempo)) var(--corba)}
+.demana-mobil{transition:transform calc(.25s * var(--tempo)) ease,visibility 0s calc(.25s * var(--tempo))}
+.demana-mobil.visible{transition:transform calc(.25s * var(--tempo)) ease}
+.camp label{transition:top calc(.15s * var(--tempo)),font-size calc(.15s * var(--tempo)),transform calc(.15s * var(--tempo))}
+@media (hover:hover){
+  .boto,.boto-sec,.boto-lleu,.tanca,.faq summary{transition:background-color calc(.15s * var(--tempo)),color calc(.15s * var(--tempo))}
+}
+
+/* ---------- A · La barra de la tanda en 26 trams ----------
+   La mateixa barra, partida en 26 (un tram per lot). El JS hi posa els <i> i les classes: .on = reservat, .teu = el
+   teu lot (idea B). Sense moviment propi: el color es fon (180 ms); a l'entrada, cada tram té el seu retard (45 ms). */
+.barra.mv-trams{display:flex;align-items:center;gap:2px;overflow:visible;background:none;border-radius:0}
+.barra.mv-trams>i{flex:1 1 0;min-width:0;width:auto;height:100%;border-radius:2px;background:var(--b-pista);transition:background-color calc(180ms * var(--tempo)) linear}
+.barra.mv-trams>i.on{background:var(--b-ple)}
+/* El tram teu és granat i, a més, més alt: granat sobre llosa només té un contrast d'1,2:1 (IDEES.md idea 2) */
+.barra.mv-trams>i.teu{background:var(--cta);height:calc(100% + 6px)}
+.barra.mv-trams.mv-entra>i{transition-delay:calc(var(--i) * 45ms * var(--tempo))}
+
+/* ---------- Xifres i textos que entren ---------- */
+.mv-x{display:inline-block;white-space:nowrap}   /* la xifra que canvia (es mou sola dins de la frase) */
+.mv-text{display:inline-block}                   /* el text d'un botó que canvia */
+
+/* ---------- C · Mitja o sencera ----------
+   La càpsula (abans, el fons de l'opció marcada) és ara un pseudoelement de la fila: l'estat final el posa el CSS i
+   el JS només hi fa el vaivé. La fila de la llista que correspon es marca (color) alhora. */
+.c-mida{position:relative;isolation:isolate}
+.c-mida::before{content:"";position:absolute;z-index:-1;top:4px;bottom:4px;left:4px;width:calc((100% - 12px) / 2);border-radius:999px;background:var(--cta)}
+.c-mida:has(input[value="canal"]:checked)::before{transform:translateX(calc(100% + 4px))}
+.c-mida input:checked+span{background:transparent;color:var(--sobre-cta)}
+.c-mida span{transition:color calc(220ms * var(--tempo))}
+@media (hover:hover){.c-mida input:checked+span:hover{background:transparent}}
+#canals .l-llista li span{transition:color calc(220ms * var(--tempo))}
+#canals:has(input[value="mitja-canal"]:checked) .l-llista li:nth-child(1) span,
+#canals:has(input[value="canal"]:checked) .l-llista li:nth-child(2) span{color:var(--cta)}
+
+/* ---------- D · Preguntes ----------
+   El + és ara dues barres: en obrir, gira mitja volta i la vertical es tanca (queda el −). L'alçada de la resposta
+   la mou el JS. .mv-tanca = s'està tancant (la icona ja torna a +). */
+.faq summary::after,.faq details[open] summary::after{content:"";width:1.2em;height:1.2em;font-size:1.6rem;
+  background:linear-gradient(var(--accent),var(--accent)) center/.55em 2px no-repeat,linear-gradient(var(--accent),var(--accent)) center/2px .55em no-repeat;
+  transition:transform calc(320ms * var(--tempo)) var(--corba),background-size calc(320ms * var(--tempo)) var(--corba)}
+.faq details[open]:not(.mv-tanca) summary::after{transform:rotate(180deg);background-size:.55em 2px,2px 0}
+
+/* ---------- H · Confirmació ----------
+   El JS posa la vista nova al costat del formulari mentre dura el canvi; aquí només cal que el contenidor la talli. */
+#full-cos{position:relative}
+
+/* ---------- Moviment reduït: res es mou ---------- */
+@media (prefers-reduced-motion:reduce){
+  *,*::before,*::after{animation:none!important;transition:none!important}
+}

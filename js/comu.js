@@ -67,5 +67,9 @@
 
   const kg = (n) => (Math.round(n * 10) / 10).toString().replace('.', ',');
 
-  window.CasaCamp = { MESOS, dataCurta, dataHora, lots, queden, producte, diesEntrega, ambPresentacio, desaDades, esc, importLots, importEnviament, importTotal, kg, z2 };
+  // La frase que diu que la comanda va sencera a la tanda següent: la fan servir el full de compra (js/compra.js) i la
+  // caixa del lot (js/home.js), amb la mateixa cadena
+  const fraseTandaSeguent = (dataLimit) => `Perquè t'arribi tot junt, va a la tanda següent, oberta fins al ${dataCurta(dataLimit)}.`;
+
+  window.CasaCamp = { fraseTandaSeguent, MESOS, dataCurta, dataHora, lots, queden, producte, diesEntrega, ambPresentacio, desaDades, esc, importLots, importEnviament, importTotal, kg, z2 };
 })();

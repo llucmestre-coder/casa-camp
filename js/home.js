@@ -33,10 +33,15 @@
   // Selector de quantitat de la caixa de compra: el botó obre el full amb aquests lots (data-lots, js/compra.js). El
   // màxim és el mateix que el del full; si no caben a la tanda d'ara, ho diu el full abans de pagar.
   let lots = 1;
+  let textQueden = ''; // el text de #t-queden quan els lots hi caben (el posa pinta())
   const maxLots = () => M.maxLotsPerComanda('lot') || M.placesPerTanda();
   function quantitat(canvi) {
     lots = Math.min(Math.max(1, lots + canvi), maxLots());
-    el('l-num').textContent = C.lots(lots);
+    Moviment.text(el('l-num'), C.lots(lots), 'balanca');
+    Moviment.teus(el('t-barra'), lots);
+    // Si els lots no hi caben a la tanda d'ara, van tots junts a la següent: ho diu la mateixa frase que el full
+    const a = M.previsioAssignacio(lots, 'lot');
+    el('t-queden').textContent = a.ok && a.motiu !== 'hi-cap' ? C.fraseTandaSeguent(a.dataLimit) : textQueden;
     el('l-menys').disabled = lots <= 1;
     el('l-mes').disabled = lots >= maxLots();
     el('l-demana').dataset.lots = lots;
@@ -50,14 +55,14 @@
     const id = document.querySelector('input[name="c-mida"]:checked').value;
     el('c-preu').textContent = D.preuProducte(id, 1).etiqueta;
     el('c-preu-kg').textContent = D.preuPerKgCanal(id);
-    el('c-demana').textContent = TEXT_BOTO[id];
+    Moviment.text(el('c-demana'), TEXT_BOTO[id], 'balanca');
     el('c-demana').dataset.obreFull = id;
   }
   $$('input[name="c-mida"]').forEach((r) => r.addEventListener('change', mida));
 
-  function barra(id, percent) {
-    const b = el(id).firstElementChild;
-    b.style.width = percent + '%';
+  // La barra de la tanda, en un tram per lot (js/moviment.js)
+  function barra(id, o) {
+    Moviment.tanda(el(id), { places: o.places, reservats: o.lots });
   }
 
   function pinta() {
@@ -71,16 +76,17 @@
     // Franja sota el hero (en Lluc, 02/11/2026: «Propera tanda: {data}» es llegia com el dia que arriba la carn)
     el('fr-data').textContent = oberta;
     el('fr-queden').textContent = queden === 1 ? 'hi queda 1 lot' : `hi queden ${queden} lots`;
-    barra('fr-barra', o.percent);
+    barra('fr-barra', o);
 
     // La tanda dins de la caixa de compra del lot, com a informació de compra
     el('t-titol').textContent = oberta;
-    el('t-queden').textContent = `${queden === 1 ? 'Hi queda 1 lot' : `Hi queden ${queden} lots`} de ${places}. Si s'omple abans, es tanca abans.`;
+    textQueden = `${queden === 1 ? 'Hi queda 1 lot' : `Hi queden ${queden} lots`} de ${places}. Si s'omple abans, es tanca abans.`;
+    el('t-queden').textContent = textQueden;
     const pb = el('t-barra');
     pb.setAttribute('aria-valuemax', places);
     pb.setAttribute('aria-valuenow', o.lots);
     pb.setAttribute('aria-label', `Lots reservats a la tanda: ${o.lots} de ${places}`);
-    barra('t-barra', o.percent);
+    barra('t-barra', o);
     el('t-entrega').textContent = `Uns ${C.diesEntrega()} dies després que es tanqui la tanda.`;
     quantitat(0);
 
