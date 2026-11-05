@@ -6,9 +6,9 @@
    PENDENT: les icones són provisionals (logo actual); en canviar-les, pujar VERSIO perquè es tornin a desar. */
 'use strict';
 
-const VERSIO = 'casa-camp-panell-v1';
+const VERSIO = 'casa-camp-panell-v2';
 const FITXERS = [
-  './', './index.html', './moduls.js', './pwa.js', './manifest.webmanifest',
+  './', './index.html', './moduls.js', './moduls-comu.js', './moduls-diners.js', './moduls-logistica.js', './moduls-clients.js', './pwa.js', './manifest.webmanifest',
   './icones/icona-192.png', './icones/icona-512.png', './icones/icona-maskable-512.png',
   '../css/styles.css', '../css/panell.css',
   '../js/dades.js', '../js/magatzem.js', '../js/comu.js', '../js/panell.js',

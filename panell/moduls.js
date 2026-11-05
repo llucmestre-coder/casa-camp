@@ -6,7 +6,12 @@
    Sense DOM ni estat propi: a Node (`require`) per a les proves i al navegador (`window.CassovallModuls`).
    Guia pas a pas: PLA-eines/panell-connectat/FONAMENT.md. */
 (function (arrel, fabrica) {
-  const exportat = fabrica();
+  // El contingut de cada mòdul és als fitxers panell/moduls-*.js (a Node, es carreguen amb `require`)
+  const node = typeof module === 'object' && module.exports;
+  const contingut = node
+    ? Object.assign({}, require('./moduls-diners.js'), require('./moduls-logistica.js'), require('./moduls-clients.js'))
+    : Object.assign({}, arrel && arrel.CassovallModulsDiners, arrel && arrel.CassovallModulsLogistica, arrel && arrel.CassovallModulsClients);
+  const exportat = fabrica(contingut, node ? require('./moduls-comu.js') : arrel && arrel.CassovallModulsComu);
   if (typeof module === 'object' && module.exports) module.exports = exportat;
   if (arrel) {
     arrel.CassovallModulsBase = exportat;
@@ -14,7 +19,7 @@
       arrel.CassovallModuls = exportat.crearRegistre({ M: arrel.CassovallMagatzem, D: arrel.CassovallDades, C: arrel.CasaCamp });
     }
   }
-})(typeof window !== 'undefined' ? window : null, function () {
+})(typeof window !== 'undefined' ? window : null, function (CONT, COMU) {
   'use strict';
 
   const ESTATS = { oberta: 'Oberta', completa: 'Tancada', preparacio: 'En preparació', enviada: 'Enviada', entregada: 'Entregada', 'per-acordar': 'Per acordar' };
@@ -47,8 +52,17 @@
     const t = (s) => Date.UTC(...s.split('-').map((v, i) => (i === 1 ? Number(v) - 1 : Number(v))));
     return Math.round((t(aISO) - t(deISO)) / 86400000);
   };
+  // «avui», «demà» o «d’aquí a N dies» si una tanda oberta es tanca en tres dies o menys; si no, null
+  const quanEsTanca = (t, avuiISO) => {
+    if (!t || t.estat !== 'oberta' || t.vencuda) return null;
+    const d = dies(t.dataLimit, avuiISO);
+    return d < 0 || d > 3 ? null : d === 0 ? 'avui' : d === 1 ? 'demà' : `d’aquí a ${d} dies`;
+  };
 
   /* ---------- El nucli: el que ja feia el panell abans dels mòduls (no s'apaga) ---------- */
+
+  // L'efectiu que encara s'ha de cobrar (es cobra en mà, en entregar)
+  const efectiuPerCobrar = (c) => c.metodePagament === 'efectiu' && c.pagament === 'pendent' && !c.entregada;
 
   const NUCLI = {
     id: 'nucli',
@@ -59,7 +73,7 @@
       'comanda-nova': {
         nom: 'Entra una comanda per la web',
         origen: 'web',
-        text: (ev, ctx) => `${ev.dades.nom} ha fet una comanda: ${ctx.C.producte(ev.dades.producte, ev.dades.lots)} (${ev.dades.tandaNumero ? 'tanda ' + ev.dades.tandaNumero : 'a part'})`,
+        text: (ev, ctx) => `${ev.dades.nom} ha fet una comanda${ev.origen === 'telefon' ? ' per telèfon' : ''}: ${ctx.C.producte(ev.dades.producte, ev.dades.lots)} (${ev.dades.tandaNumero ? 'tanda ' + ev.dades.tandaNumero : 'a part'})`,
         avis: (ev, ctx) => ({ titol: 'Comanda nova', cos: `${ev.dades.nom} · ${ctx.C.producte(ev.dades.producte, ev.dades.lots)}`, hash: ev.comandaId ? '#comanda=' + ev.comandaId : '#avui' }),
         simulador: {
           text: 'Entra una comanda per la web',
@@ -68,15 +82,15 @@
             const lots = LOTS_SIMULATS[n % LOTS_SIMULATS.length];
             const client = COMPRADORS_SIMULATS[n % COMPRADORS_SIMULATS.length];
             const r = ctx.M.crearComanda({ lots, client, origen: 'web', simulat: true });
-            return r.ok ? { ok: true, text: `Comanda de ${client.nom}: ${ctx.C.lots(lots)}.` } : { ok: false, text: 'No s’ha pogut entrar la comanda.' };
+            return r.ok ? { ok: true, text: `Comanda ${COMU.de(client.nom)}: ${ctx.C.lots(lots)}.` } : { ok: false, text: 'No s’ha pogut entrar la comanda.' };
           },
         },
       },
       'tanda-plena': {
         nom: 'S’omple una tanda',
         origen: 'web',
-        text: (ev) => `La tanda ${ev.dades.numero} s’ha omplert: ${ev.dades.lots} de ${ev.dades.places} lots`,
-        avis: (ev) => ({ titol: `Tanda ${ev.dades.numero} plena`, cos: `${ev.dades.lots} de ${ev.dades.places} lots. Ja és tancada.`, hash: '#tanda=' + (ev.tandaId || '') }),
+        text: (ev) => `La tanda ${ev.dades.numero} s’ha omplert: ${ev.dades.lots} ${COMU.de(String(ev.dades.places))} lots`,
+        avis: (ev) => ({ titol: `Tanda ${ev.dades.numero} plena`, cos: `${ev.dades.lots} ${COMU.de(String(ev.dades.places))} lots. Ja és tancada.`, hash: '#tanda=' + (ev.tandaId || '') }),
         simulador: {
           text: 'Omple la tanda actual',
           dispara(ctx) {
@@ -86,7 +100,7 @@
             const client = COMPRADORS_SIMULATS[n % COMPRADORS_SIMULATS.length];
             const lots = t.ocupacio.lliures;
             const r = ctx.M.crearComanda({ lots, client, origen: 'web', simulat: true });
-            return r.ok ? { ok: true, text: `La tanda ${t.numero} s’ha omplert amb ${ctx.C.lots(lots)} de ${client.nom}.` } : { ok: false, text: 'No s’ha pogut omplir la tanda.' };
+            return r.ok ? { ok: true, text: `La tanda ${t.numero} s’ha omplert amb ${ctx.C.lots(lots)} ${COMU.de(client.nom)}.` } : { ok: false, text: 'No s’ha pogut omplir la tanda.' };
           },
         },
       },
@@ -99,36 +113,57 @@
     accions: {
       'passa-tanda': (ctx, a, ui) => ui.canviaEstat(ctx.M.tanda(a.tandaId), a.estat),
       'veu-esdeveniment': (ctx, a) => ctx.M.marcaEsdevenimentVist(a.id),
+      'entrega-a-part'(ctx, a, ui) {
+        const c = ctx.M.comanda(a.comandaId);
+        // L'efectiu es cobra en entregar-la, amb el mateix botó (com a la ruta)
+        const cobrar = c && efectiuPerCobrar(c) && ctx.accio('pagaments', 'cobrat');
+        const r = c ? ctx.M.marcaEntregada(c.id) : null;
+        if (r && r.ok && !r.jaEntregada && cobrar) cobrar(ctx, { comandaId: c.id }, { flaix() {} });
+        if (r && r.ok && !r.jaEntregada && ui && ui.flaix) ui.flaix(cobrar ? `Fet. ${c.client.nom} ja té la comanda i l’has cobrada.` : `Fet. ${c.client.nom} ja té la comanda.`);
+      },
     },
+    // Les tasques de la tanda surten del recorregut (`M.pasTanda`): només el pas que toca ara i només si es pot fer. Els passos
+    // dels mòduls (demanar la carn, els kg, les etiquetes) els dona el seu mòdul. «La tanda es tanca demà» no és feina (no
+    // demana cap acció): surt a la targeta de la tanda d'«Avui» (`quanEsTanca`).
     tasques(ctx) {
       const { M, C } = ctx;
-      const avui = ctx.avui();
       const sortida = [];
       for (const t of M.tandes().slice().reverse()) {
-        if (t.estat === 'entregada') continue;
-        const cs = M.comandesDeTanda(t.id).length;
-        const resum = cs ? `${C.lots(t.ocupacio.lots)} · ${cs} ${cs === 1 ? 'comprador' : 'compradors'}` : 'Cap comprador';
+        const p = M.pasTanda(t.id);
+        if (!p || !p.estat || !M.potPassar(t.id, p.estat).ok) continue;
+        // Només les que surten amb la tanda (el filtre únic de magatzem.js)
+        const cs = M.comandesQueSurten(t.id).length;
+        const resum = cs ? `${C.lots(M.lotsQueSurten(t.id))} · ${COMU.plural(cs, 'comprador', 'compradors')}` : 'Cap comprador';
         const passa = (estat, text) => ({ text, accio: 'passa-tanda', args: { tandaId: t.id, estat } });
-        if (t.vencuda) {
-          sortida.push({ id: 'tanda-vencuda:' + t.id, prioritat: 'bloqueja', titol: `La tanda ${t.numero} ha passat la data límit`, detall: `${resum}. Tanca-la perquè els compradors ho sàpiguen.`, boto: passa('completa', 'Tanca-la') });
-        } else if (t.estat === 'completa') {
-          sortida.push({ id: 'tanda-prepara:' + t.id, prioritat: 'bloqueja', titol: `Tanda ${t.numero} tancada: comença a preparar-la`, detall: resum, boto: passa('preparacio', 'Passa a «En preparació»') });
-        } else if (t.estat === 'preparacio') {
-          sortida.push({ id: 'tanda-envia:' + t.id, prioritat: 'bloqueja', titol: `Tanda ${t.numero} en preparació: marca-la com a enviada quan surti`, detall: resum, boto: passa('enviada', 'Passa a «Enviada»') });
-        } else if (t.estat === 'enviada') {
-          sortida.push({ id: 'tanda-entrega:' + t.id, prioritat: 'data', titol: `Tanda ${t.numero} en camí: marca-la com a entregada quan arribi`, detall: resum, boto: passa('entregada', 'Passa a «Entregada»') });
-        } else if (t.estat === 'oberta') {
-          const d = dies(t.dataLimit, avui);
-          if (d >= 0 && d <= 3) {
-            const quan = d === 0 ? 'avui' : d === 1 ? 'demà' : `d’aquí a ${d} dies`;
-            sortida.push({ id: 'tanda-data:' + t.id, prioritat: 'data', titol: `La tanda ${t.numero} es tanca ${quan}`, detall: `${t.ocupacio.lots} de ${t.ocupacio.places} lots reservats`, boto: { text: 'Veure la tanda', hash: '#tanda=' + t.id } });
+        const base = { tandaId: t.id, pas: p.id };
+        if (p.id === 'tancada' && t.vencuda) {
+          sortida.push(Object.assign({ id: 'tanda-vencuda:' + t.id, prioritat: 'bloqueja', titol: `La tanda ${t.numero} ha passat la data límit`, detall: `${resum}. Tanca-la perquè els compradors ho sàpiguen.`, boto: passa('completa', 'Tanca-la') }, base));
+        } else if (p.id === 'preparacio') {
+          sortida.push(Object.assign({ id: 'tanda-prepara:' + t.id, prioritat: 'bloqueja', titol: `Tanda ${t.numero} tancada: comença a preparar-la`, detall: resum, boto: passa('preparacio', 'Passa a «En preparació»') }, base));
+        } else if (p.id === 'enviada') {
+          sortida.push(Object.assign({ id: 'tanda-envia:' + t.id, prioritat: 'bloqueja', titol: `Tanda ${t.numero} en preparació: marca-la com a enviada quan surti`, detall: resum, boto: passa('enviada', 'Passa a «Enviada»') }, base));
+        } else if (p.id === 'entregada') {
+          // Si queden entregues pròpies (sense la ruta, les porta ell), és feina d'avui. Si només s'espera que arribi (el
+          // transportista, el comprador que la ve a buscar), va a «En espera», amb el botó per quan arribi.
+          const propies = M.comandesQueSurten(t.id).filter((c) => !c.entregada && c.lliurament === 'repartiment-propi');
+          if (propies.length) {
+            const pobles = Array.from(new Set(propies.map((c) => c.client.poblacio))).join(' · ');
+            sortida.push(Object.assign({ id: 'tanda-entrega:' + t.id, prioritat: 'data', titol: `Tanda ${t.numero} en camí: porta ${propies.length === 1 ? 'la comanda' : 'les ' + propies.length + ' comandes'} i marca-la com a entregada`, detall: `${resum} · ${pobles}`, boto: passa('entregada', 'Passa a «Entregada»') }, base));
+          } else {
+            sortida.push(Object.assign({ id: 'tanda-entrega:' + t.id, prioritat: 'info', espera: true, titol: `La tanda ${t.numero} és en camí`, detall: `${resum} · quan arribi, marca-la com a entregada`, boto: passa('entregada', 'Passa a «Entregada»') }, base));
           }
         }
       }
-      for (const c of M.comandes({ nova: true })) {
-        const nom = (c.client.nom + ' ' + c.client.cognoms).trim();
-        sortida.push({ id: 'comanda-nova:' + c.id, prioritat: 'info', titol: `Comanda nova de ${nom}`, detall: `${C.producte(c.producte, c.lots)} · ${c.tandaNumero ? 'tanda ' + c.tandaNumero : 'a part'}`, boto: { text: 'Veure-la', hash: '#comanda=' + c.id } });
+      // Les comandes sense tanda (canals, entrega per acordar): el correu al pastor diu «truca per quedar el dia». La tasca
+      // porta el telèfon i, quan la té, es marca entregada (d'allà, l'opinió). Si encara no ha pagat, primer el cobrament.
+      for (const c of M.comandes()) {
+        if (c.tandaId || c.entregada) continue;
+        const l = M.lliurament(c.id);
+        if (!l || l.via !== 'a-part' || !l.seguents.includes('entregada')) continue;
+        const cobra = efectiuPerCobrar(c) && ctx.actiu('pagaments');
+        sortida.push({ id: 'entrega-a-part:' + c.id, prioritat: 'data', pas: 'lliurament', titol: `Truca ${c.client.nom} per quedar el dia d’entrega: ${C.producte(c.producte, c.lots)}`, detall: `${(c.client.nom + ' ' + (c.client.cognoms || '')).trim()} · ${c.client.poblacio || ''} · ${cobra ? 'en efectiu: cobra-la quan la hi donis' : 'quan la tingui, marca-la com a entregada'}`, tel: { href: 'tel:' + String(c.client.telefon).replace(/[^\d+]/g, ''), text: 'Truca al ' + c.client.telefon }, boto: { text: cobra ? 'Ja la té i l’ha pagada' : 'Ja la té', accio: 'entrega-a-part', args: { comandaId: c.id } } });
       }
+      // Les comandes noves no fan tasca (no demanen cap acció): surten a «Ha passat» i amb la marca «Nova» a Comandes
       return sortida;
     },
   };
@@ -137,99 +172,104 @@
   // `vista`: pestanya pròpia; `seccions`: trossos dins d'una altra vista (`on`: 'tanda', 'comanda', 'comandes',
   // 'avui', 'configuracio'). Cap de les dues surt fins que té `render` / `html`. Tot és «pendent del pastor».
 
-  const base = (d) => Object.assign({ pendent: true, vista: null, seccions: [], dades: [], esdeveniments: {}, correus: [], accions: {}, tasques: () => [] }, d);
+  const base = (d) => Object.assign({ pendent: true, vista: null, seccions: [], dades: [], esdeveniments: {}, correus: [], accions: {}, simuladors: [], tasques: () => [] }, d);
+
+  // Aquí només hi ha el que identifica cada mòdul (nom, descripció, on viuen les dades). El contingut (vistes, seccions,
+  // tasques, esdeveniments, correus, simuladors) és a panell/moduls-*.js i s'hi enganxa pel mateix `id`.
+  const meta = (id) => CONT[id] || CONT[id.replace(/-([a-z])/g, (_, l) => l.toUpperCase())] || {};
+  const modul = (def) => {
+    const c = meta(def.id);
+    // `vista`: la identitat de la declaració + el `render` del contingut
+    const vista = def.vista || c.vista ? Object.assign({}, def.vista, c.vista) : null;
+    return base(Object.assign({}, def, c, { vista, seccions: c.seccions || def.seccions || [], esdeveniments: Object.assign({}, def.esdeveniments, c.esdeveniments), correus: c.correus || def.correus || [] }));
+  };
 
   const MODULS = [
-    base({
+    modul({
       id: 'pagaments',
       nom: 'Pagaments',
       descripcio: 'Què has cobrat a cada tanda, les devolucions i els cobraments que fallen.',
       vista: { id: 'pagaments', nom: 'Pagaments' },
-      dades: ['comanda.metodePagament', 'comanda.pagament', 'dadesModuls.pagaments'],
-      esdeveniments: { 'pagament-fallit': { nom: 'Un cobrament falla', origen: 'pagament' } },
-      correus: [{ plantilla: 'devolucio' }],
+      dades: ['comanda.metodePagament', 'comanda.pagament', 'comanda.historial'],
     }),
-    base({
+    modul({
       id: 'enviaments',
       nom: 'Enviaments',
       descripcio: 'Etiquetes, número de seguiment i en quin punt és cada paquet.',
       seccions: [{ on: 'tanda', id: 'enviaments' }, { on: 'comanda', id: 'enviament' }],
-      dades: ['comanda.lliurament', 'comanda.client.adreca', 'dadesModuls.enviaments'],
-      esdeveniments: { 'paquet-estat': { nom: 'Un paquet canvia de punt', origen: 'transportista' } },
+      dades: ['comanda.lliurament', 'comanda.client.adreca', 'dadesModuls.enviaments (paquets i seguiment)'],
     }),
     base({
       id: 'avisos',
       nom: 'Avisos al mòbil',
-      descripcio: 'Una notificació quan entra una comanda o s’omple una tanda.',
+      descripcio: 'Una notificació quan entra una comanda, s’omple una tanda o falla un cobrament.',
       seccions: [{ on: 'configuracio', id: 'avisos', html: (ctx) => (ctx.avisos ? ctx.avisos.html(ctx) : ''), despres: (el, ctx) => ctx.avisos && ctx.avisos.despres(el, ctx) }],
-      dades: ['esdeveniments (comanda-nova, tanda-plena)'],
+      dades: ['esdeveniments (els que tenen avís)'],
     }),
-    base({
+    modul({
       id: 'comandes-telefon',
       nom: 'Comandes per telèfon',
       descripcio: 'Apuntar en pocs tocs una comanda que t’han fet per telèfon.',
       seccions: [{ on: 'comandes', id: 'alta-telefon' }],
       dades: ['comanda (origen telefon)', 'tanda (mateixa assignació que la web)'],
     }),
-    base({
+    modul({
       id: 'escorxador',
       nom: 'Escorxador i kg reals',
       descripcio: 'Què has de demanar a l’escorxador quan una tanda és plena i els kg reals de cada lot.',
       seccions: [{ on: 'tanda', id: 'escorxador' }],
-      dades: ['tanda.ocupacio', 'dadesModuls.escorxador (kg reals)'],
-      esdeveniments: { 'escorxador-avisat': { nom: 'S’avisa l’escorxador', origen: 'escorxador' } },
+      dades: ['tanda.ocupacio', 'dadesModuls.escorxador (demanat i kg reals)'],
     }),
-    base({
+    modul({
       id: 'factures',
       nom: 'Factures',
       descripcio: 'Una factura per a cada comanda, amb número correlatiu.',
       vista: { id: 'factures', nom: 'Factures' },
       seccions: [{ on: 'comanda', id: 'factura' }],
       dades: ['comanda.importLots', 'comanda.importEnviament', 'dadesModuls.factures (numeració)'],
-      esdeveniments: { 'factura-emesa': { nom: 'S’emet una factura', origen: 'factures' } },
     }),
-    base({
+    modul({
       id: 'gestoria',
       nom: 'Números per a la gestoria',
-      descripcio: 'El resum de cada tanda i un Excel (CSV) per passar a la gestoria.',
+      descripcio: 'El resum de cada tanda o de cada mes i un Excel (CSV) per passar a la gestoria.',
       vista: { id: 'gestoria', nom: 'Gestoria' },
-      dades: ['pagaments', 'factures', 'enviaments'],
+      dades: ['comandes (cobrament, import)', 'dadesModuls.factures', 'dadesModuls.gestoria (períodes passats)'],
     }),
-    base({
+    modul({
       id: 'ruta',
       nom: 'Ruta de repartiment',
       descripcio: 'Les entregues que fas tu, agrupades per poble. Només si les repartiu vosaltres.',
       seccions: [{ on: 'tanda', id: 'ruta' }],
-      dades: ['comanda.lliurament = repartiment-propi', 'comanda.client.poblacio'],
+      dades: ['comanda.lliurament = repartiment-propi o recull', 'comanda.client.poblacio'],
     }),
-    base({
+    modul({
       id: 'clients',
       nom: 'Clients que repeteixen',
       descripcio: 'Una fitxa per a cada persona amb totes les seves comandes.',
       vista: { id: 'clients', nom: 'Clients' },
-      dades: ['comanda.client (telèfon o correu)'],
+      dades: ['comanda.client (telèfon o correu)', 'dadesModuls.clients (avisos de tanda nova)'],
     }),
-    base({
+    modul({
       id: 'opinions',
       nom: 'Opinió en arribar el paquet',
       descripcio: 'Una pregunta al comprador quan li arriba el paquet.',
       vista: { id: 'opinions', nom: 'Opinions' },
-      dades: ['dadesModuls.opinions'],
-      esdeveniments: { 'opinio-rebuda': { nom: 'Un comprador respon', origen: 'client' } },
-      correus: [{ plantilla: 'opinio-demanada' }],
+      dades: ['comanda.entregada', 'correus (opinio-demanada)', 'dadesModuls.opinions (respostes)'],
     }),
   ];
 
   /* ---------- El registre ---------- */
 
-  const copiaDef = (d) => Object.assign({}, d, { seccions: (d.seccions || []).slice(), esdeveniments: Object.assign({}, d.esdeveniments), correus: (d.correus || []).slice(), accions: Object.assign({}, d.accions) });
+  const copiaDef = (d) => Object.assign({}, d, { seccions: (d.seccions || []).slice(), esdeveniments: Object.assign({}, d.esdeveniments), correus: (d.correus || []).slice(), accions: Object.assign({}, d.accions), simuladors: (d.simuladors || []).slice() });
 
   // opcions: { M, D, C, ara? }. `ara` només per a les proves.
   function crearRegistre(opcions) {
-    const { M, D, C, ara } = opcions;
+    const { M, D, ara } = opcions;
+    const C = COMU && COMU.tipografia ? COMU.tipografia(opcions.C) : opcions.C;
     const moduls = new Map();
-    // Els que cal passar a les funcions dels mòduls. La interfície (`ui`, `avisos`) la posa panell.js.
-    const ctx = { M, D, C, ESTATS, avui: () => avuiISO(ara), ui: null, avisos: null };
+    // Els que cal passar a les funcions dels mòduls. La interfície (`ui`, `avisos`) la posa panell.js. `actiu(id)`: si un
+    // altre mòdul és encès (el que un mòdul llegeix d'un altre ho mira sempre); `ara()`: l'hora, que les proves fixen.
+    const ctx = { M, D, C, ESTATS, avui: () => avuiISO(ara), ara: () => (ara ? ara() : new Date()), actiu: (id) => actiu(id), accio: (m, n) => accio(m, n), ui: null, avisos: null };
 
     function registra(def) {
       if (!def || typeof def.id !== 'string' || !ID.test(def.id)) throw new Error('modul_invalid: cal un id (minúscules, xifres i guions)');
@@ -262,6 +302,7 @@
 
     /* Vistes i seccions */
     const vistes = () => actius().filter((m) => m.vista && typeof m.vista.render === 'function').map((m) => ({ id: m.vista.id, nom: m.vista.nom || m.nom, modul: m.id }));
+    // `render(ctx, param)`: `param` és el que va darrere del «=» de l'adreça (`#clients=t600000101`)
     const vista = (id) => {
       const m = actius().find((x) => x.vista && x.vista.id === id && typeof x.vista.render === 'function');
       return m ? { modul: m.id, nom: m.vista.nom || m.nom, render: m.vista.render } : null;
@@ -272,14 +313,58 @@
     /* Tasques d'«Avui»: es calculen cada vegada, no es desen */
     const tascaValida = (t) =>
       !!t && typeof t.id === 'string' && typeof t.titol === 'string' && t.prioritat in PRIORITATS && !!t.boto && typeof t.boto.text === 'string' && (typeof t.boto.hash === 'string' || typeof t.boto.accio === 'string');
-    function tasques() {
+    // «Per fer» (feina d'ara) i «En espera» (el pas depèn d'algú altre: la carn que ha d'arribar, la tanda en camí, el
+    // comprador que la ve a buscar). Una tasca d'espera porta `espera: true` i el botó per quan passi.
+    const tasques = () => totesTasques().filter((t) => !t.espera);
+    const esperes = () => totesTasques().filter((t) => t.espera);
+    function totesTasques() {
       const totes = [];
       for (const m of actius()) {
         const fetes = provaDe(() => m.tasques(ctx), m.id, []) || [];
         for (const t of fetes) if (tascaValida(t)) totes.push(Object.assign({}, t, { modul: m.id }));
       }
-      // Estable: dins de cada prioritat es manté l'ordre del registre i el que dóna cada mòdul
-      return totes.map((t, i) => ({ t, i })).sort((a, b) => PRIORITATS[a.t.prioritat] - PRIORITATS[b.t.prioritat] || a.i - b.i).map((p) => p.t);
+      // Una tasca per feina. Cada tasca pot dir quina feina fa (`feina`: claus com 'factura:CC-1006' o 'kg:t13'). Una tasca
+      // que només demana una feina que ja fa una altra (`demanda`: «Sílvia la demana», «la gestoria les espera») no surt:
+      // s'afegeix al detall de la que la fa.
+      const fan = new Map();
+      for (const t of totes) if (!t.demanda) for (const k of t.feina || []) if (!fan.has(k)) fan.set(k, t);
+      const netes = [];
+      for (const t of totes) {
+        const qui = t.demanda && (t.feina || []).length && t.feina.every((k) => fan.has(k)) ? Array.from(new Set(t.feina.map((k) => fan.get(k)))) : null;
+        if (!qui) {
+          netes.push(t);
+          continue;
+        }
+        for (const x of qui) if (!(x.detall || '').includes(t.demanda)) x.detall = (x.detall ? x.detall + ' · ' : '') + t.demanda;
+      }
+      // Dins d'una tanda, un pas del recorregut no queda mai per sota d'un de posterior: agafa la urgència més alta dels que
+      // té al darrere (si preparar la tanda bloqueja, el que toca abans també). Entre tandes, la més antiga va primer: agafa
+      // la urgència més alta de les més noves. Així l'ordre per prioritat, el de les tandes i el del recorregut no es
+      // contradiuen mai.
+      const ordre = (t) => (t.pas ? M.ordrePas(t.pas) : -1);
+      const nomPrioritat = Object.keys(PRIORITATS);
+      const numero = (id) => (M.tanda(id) || { numero: Infinity }).numero;
+      const deTanda = new Map();
+      for (const t of netes) if (t.tandaId) deTanda.set(t.tandaId, (deTanda.get(t.tandaId) || []).concat(t));
+      for (const ts of deTanda.values()) {
+        const urgencia = ts.map((t) => ts.filter((x) => ordre(x) > ordre(t)).reduce((p, x) => Math.min(p, PRIORITATS[x.prioritat]), PRIORITATS[t.prioritat]));
+        ts.forEach((t, k) => { t.prioritat = nomPrioritat.find((n) => PRIORITATS[n] === urgencia[k]); });
+      }
+      // Entre tandes només compta el camí fins a l'entrega: el que ve després (l'opinió, la factura) no passa al davant
+      // perquè una tanda més nova tingui pressa.
+      const finsEntrega = (t) => t.pas && M.ordrePas(t.pas) <= M.ordrePas('entregada');
+      let mesNova = Infinity;
+      for (const id of Array.from(deTanda.keys()).sort((a, b) => numero(b) - numero(a))) {
+        const ts = deTanda.get(id).filter(finsEntrega);
+        ts.forEach((t) => { if (PRIORITATS[t.prioritat] > mesNova) t.prioritat = nomPrioritat.find((n) => PRIORITATS[n] === mesNova); });
+        mesNova = Math.min(mesNova, ...ts.map((t) => PRIORITATS[t.prioritat]));
+      }
+      // Per prioritat; dins de cada prioritat, les de tanda (de la més antiga a la més nova, i dins de cada tanda en l'ordre
+      // del recorregut) i després les altres, en l'ordre del registre i del que dóna cada mòdul
+      return netes
+        .map((t, i) => ({ t, i }))
+        .sort((a, b) => PRIORITATS[a.t.prioritat] - PRIORITATS[b.t.prioritat] || (a.t.tandaId ? numero(a.t.tandaId) : Infinity) - (b.t.tandaId ? numero(b.t.tandaId) : Infinity) || (a.t.tandaId && b.t.tandaId ? ordre(a.t) - ordre(b.t) : 0) || a.i - b.i)
+        .map((p) => p.t);
     }
     const accio = (modulId, nom) => {
       const m = moduls.get(modulId);
@@ -315,8 +400,23 @@
       const t = tipusEsdeveniment(ev.tipus);
       return t && actiu(t.modul) && typeof t.def.avis === 'function' ? provaDe(() => t.def.avis(ev, ctx), t.modul, null) : null;
     };
+    // Un botó del simulador per esdeveniment (`esdeveniments.<tipus>.simulador`) i els que el mòdul declari a `simuladors`
     const simulacions = () =>
-      actius().flatMap((m) => Object.keys(m.esdeveniments).filter((k) => m.esdeveniments[k].simulador).map((k) => ({ id: m.id + ':' + k, modul: m.id, tipus: k, text: m.esdeveniments[k].simulador.text, dispara: m.esdeveniments[k].simulador.dispara })));
+      actius().flatMap((m) =>
+        Object.keys(m.esdeveniments)
+          .filter((k) => m.esdeveniments[k].simulador)
+          .map((k) => ({ id: m.id + ':' + k, modul: m.id, tipus: k, text: m.esdeveniments[k].simulador.text, dispara: m.esdeveniments[k].simulador.dispara }))
+          .concat((m.simuladors || []).map((s) => ({ id: m.id + ':' + s.id, modul: m.id, tipus: null, text: s.text, dispara: s.dispara }))),
+      );
+
+    // «Entregat»: en el moment que una comanda s'entrega, cada mòdul encès pot fer la seva part (p. ex. demanar l'opinió)
+    // (Quan l'última comanda d'una tanda enviada arriba, la tanda passa sola a «Entregada»: ho fa el recorregut, a magatzem.js)
+    M.alEntregar((comanda) => {
+      for (const m of actius()) if (typeof m.alEntregar === 'function') provaDe(() => m.alEntregar(comanda, ctx), m.id);
+    });
+    // El recorregut (magatzem.js) compta els passos dels mòduls encesos: escorxador (carn i kg), enviaments (etiquetes i
+    // paquet), ruta (parades). Qui entrega cada comanda (paquet, ruta o la tanda) també en surt.
+    M.connectaModuls((id) => actiu(id));
 
     /* Correus: cada mòdul diu quines plantilles són seves */
     const modulDePlantilla = (plantilla) => {
@@ -336,11 +436,11 @@
       return p && typeof p.def.text === 'function' ? provaDe(() => p.def.text(correu, ctx), p.modul, null) : null;
     };
 
-    const api = { ctx, ESTATS, PRIORITATS, registra, desregistra, modul: (id) => moduls.get(id) || null, actiu, actius, llista, vistes, vista, seccions, tasques, accio, executa, tipusEsdeveniment, esdevenimentVisible, textEsdeveniment, avisEsdeveniment, simulacions, correuVisible, textCorreu, modulDePlantilla };
+    const api = { ctx, ESTATS, PRIORITATS, registra, desregistra, modul: (id) => moduls.get(id) || null, actiu, actius, llista, vistes, vista, seccions, tasques, esperes, accio, executa, tipusEsdeveniment, esdevenimentVisible, textEsdeveniment, avisEsdeveniment, simulacions, correuVisible, textCorreu, modulDePlantilla };
     registra(NUCLI);
     MODULS.forEach(registra);
     return api;
   }
 
-  return { crearRegistre, ESTATS, PRIORITATS, NUCLI, MODULS, COMPRADORS_SIMULATS };
+  return { crearRegistre, ESTATS, PRIORITATS, NUCLI, MODULS, COMPRADORS_SIMULATS, quanEsTanca };
 });

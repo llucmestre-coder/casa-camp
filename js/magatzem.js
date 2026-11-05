@@ -145,11 +145,73 @@
           for (const c of e.comandes.filter((x) => x.tandaId === t.id)) {
             afegeixCorreu(e, 'tanda-' + nom, c, t, { motiu: 'canvi-estat-tanda', data: quan, estatAnterior: null, estatNou: nom });
             c.historial.push({ data: quan, tipus: 'estat-tanda', tandaId: t.id, estat: nom });
+            if (nom === 'entregada') {
+              c.entregada = quan;
+              c.historial.push({ data: quan, tipus: 'entregada' });
+            }
           }
         }
       }
       reconstrueixEsdeveniments(e);
+      llavorModuls(e);
       return e;
+    }
+
+    // Clau d'un client per reconèixer-lo en comandes diferents: el telèfon (9 xifres) o, si no n'hi ha, el correu.
+    const clauClient = (k) => {
+      const tel = String((k && k.telefon) || '').replace(/\D/g, '').slice(-9);
+      return tel.length >= 9 ? 't' + tel : 'e' + String((k && k.email) || '').trim().toLowerCase();
+    };
+
+    // La feina que ja han fet els mòduls a les tandes entregades i a la tanda tancada (kg, factures, paquets, opinions…):
+    // així el panell s'obre amb historial i no tot buit. Dades dels mòduls i un sol esdeveniment: la carn de la tanda
+    // tancada ja és a punt a l'escorxador, perquè «Per fer» s'obri amb el pas que toca (apuntar-ne els kg reals).
+    function llavorModuls(e) {
+      const dm = e.dadesModuls;
+      const escorx = (dm.escorxador = { avisades: {}, kgReals: {} });
+      const fact = (dm.factures = { ultima: 0, emeses: {} });
+      const env = (dm.enviaments = { comptador: 0, etiquetes: {}, paquets: {} });
+      const op = (dm.opinions = { respostes: {} });
+      const cl = (dm.clients = { avisos: {} });
+      const dia = (t, d) => new Date(new Date(t.dataLimit + 'T10:00:00').getTime() + d * DIA).toISOString();
+      let nota = 0;
+      for (const t of e.tandes) {
+        if (t.estat === 'oberta') continue;
+        escorx.avisades[t.id] = dia(t, -4);
+        if (t.estat !== 'entregada') continue;
+        const cs = e.comandes.filter((c) => c.tandaId === t.id);
+        escorx.kgReals[t.id] = {};
+        let lot = 0;
+        for (const c of cs) {
+          escorx.kgReals[t.id][c.id] = Array.from({ length: c.lots }, () => Math.round((4.9 + ((lot++ * 37) % 5) / 10) * 10) / 10);
+        }
+        env.etiquetes[t.id] = dia(t, -1);
+        for (const c of cs) {
+          fact.ultima += 1;
+          fact.emeses[c.id] = { n: fact.ultima, data: dia(t, -1) };
+          if (c.lliurament === 'transportista') {
+            env.comptador += 1;
+            env.paquets[c.id] = { seguiment: 'SEG-' + String(900000 + env.comptador * 37), historial: [['preparat', -1], ['recollit', 1], ['en-cami', 1.5], ['entregat', 3]].map(([estat, d]) => ({ estat, data: dia(t, d) })) };
+          }
+          if (c.client.email) {
+            // Un sol correu d'entrega per comprador: el de l'opinió ja diu que la té (com fa posaEstat amb Opinions encès)
+            e.correus = e.correus.filter((x) => !(x.comandaId === c.id && x.plantilla === 'tanda-entregada'));
+            afegeixCorreu(e, 'opinio-demanada', c, t, { motiu: 'entrega', data: c.entregada });
+            if (nota < 3) op.respostes[c.id] = { data: dia(t, 4), nota: [5, 4, 5][nota], text: ['Tot en ordre i molt bona carn.', 'Va arribar fred. La picada, molt bona.', ''][nota] };
+            nota += 1;
+          }
+        }
+      }
+      // Els habituals ja saben que la tanda oberta és oberta
+      const oberta = e.tandes.find((t) => t.estat === 'oberta');
+      if (oberta) {
+        const vegades = {};
+        for (const c of e.comandes) vegades[clauClient(c.client)] = (vegades[clauClient(c.client)] || 0) + 1;
+        cl.avisos[oberta.id] = { data: iso(20), claus: Object.keys(vegades).filter((k) => vegades[k] > 1) };
+      }
+      for (const t of e.tandes) {
+        if (t.estat === 'completa' && escorx.avisades[t.id]) afegeixEsdeveniment(e, { data: iso(0), tipus: 'escorxador-llest', origen: 'escorxador', tandaId: t.id, dades: { tandaNumero: t.numero }, vist: true });
+      }
     }
 
     /* ---------- Registre d'esdeveniments ---------- */
@@ -198,8 +260,9 @@
 
     /* ---------- Primitives sobre un estat `e` (serveixen per a l'estat real i per a simulacions) ---------- */
 
-    // Ocupació d'una tanda = places que ocupen les seves comandes (1 per lot; els canals, segons dades.productes).
-    const lotsDe = (e, tandaId) => e.comandes.reduce((s, c) => (c.tandaId === tandaId ? s + c.places : s), 0);
+    // Ocupació d'una tanda = places que ocupen les seves comandes (1 per lot; els canals, segons dades.productes). Una
+    // comanda retornada abans de sortir allibera el lloc (la retinguda, no: es queda a la tanda fins que paga o es mou).
+    const lotsDe = (e, tandaId) => e.comandes.reduce((s, c) => (c.tandaId === tandaId && !(c.pagament === 'retornat' && (!c.via || c.via === 'fora')) ? s + c.places : s), 0);
     const lliures = (e, t) => t.places - lotsDe(e, t.id);
     // Una tanda `oberta` amb la data límit ja passada ha de sortir igualment: no admet més comandes (el dia mateix
     // de la data límit encara sí). L'estat només el canvia el pastor; això és el que veu la web.
@@ -220,9 +283,11 @@
       const cfg = dades.productes[producte];
       const ocupa = !!(cfg && cfg.ocupaPlaces);
       const cost = dades.costEnviament(d.client.cp);
+      const recull = ocupa && !!d.recull;
       const c = {
-        // «repartiment-propi» (gratis, el porta ell) o «transportista» (de pagament); null si no entra a cap tanda
-        lliurament: ocupa && cost.valid ? cost.lliurament : null,
+        // «repartiment-propi» (gratis, el porta ell), «transportista» (de pagament) o «recull» (el comprador passa a
+        // buscar-la; només per telèfon); null si no entra a cap tanda
+        lliurament: ocupa ? (recull ? 'recull' : cost.valid ? cost.lliurament : null) : null,
         metodePagament: d.metodePagament || dades.pagament.metodes[0],
         id: idComanda(e.comptadors.comanda),
         creada: d.creada || iso(0),
@@ -233,8 +298,13 @@
         places: ocupa ? d.lots * cfg.placesPerUnitat : 0,
         tandaId: ocupa ? d.tandaId : null,
         importLots: dades.preuProducte(producte, d.lots).import,
-        importEnviament: ocupa ? (cost.valid ? cost.import : 0) : null,
+        importEnviament: ocupa ? (!recull && cost.valid ? cost.import : 0) : null,
+        // D'on ve la comanda (web o telèfon), com va el cobrament ('pagat', 'pendent', 'fallit', 'retornat', 'recurrent'),
+        // quan s'ha entregat (null si encara no) i, si no hi cabia a la primera tanda oberta, quina era
+        origen: d.origen || 'web',
         pagament: d.pagament || 'pagat',
+        entregada: d.entregada || null,
+        desviada: d.desviada || null,
         subscripcio: d.subscripcio || null,
         origenSubscripcio: d.origenSubscripcio || null,
         historial: [{ data: d.creada || iso(0), tipus: 'creada', tandaId: ocupa ? d.tandaId : null }],
@@ -260,7 +330,7 @@
         comandaId: comanda.id,
         tandaId: tanda ? tanda.id : null,
         dades: {
-          comanda: { id: comanda.id, producte: comanda.producte, lots: comanda.lots, importLots: comanda.importLots, importEnviament: comanda.importEnviament, lliurament: comanda.lliurament, metodePagament: comanda.metodePagament, client: copia(comanda.client) },
+          comanda: { id: comanda.id, producte: comanda.producte, lots: comanda.lots, importLots: comanda.importLots, importEnviament: comanda.importEnviament, lliurament: comanda.lliurament, metodePagament: comanda.metodePagament, pagament: comanda.pagament, client: copia(comanda.client) },
           // `null` si la comanda no entra a cap tanda (entrega per acordar)
           tanda: tanda ? { id: tanda.id, numero: tanda.numero, nom: tanda.nom, dataLimit: tanda.dataLimit, places: tanda.places, estat: tanda.estat, ocupats: lotsDe(e, tanda.id) } : null,
         },
@@ -319,19 +389,210 @@
       return t;
     }
 
+    /* ---------- El recorregut: una sola taula d'on surten els passos, les tasques i els botons ----------
+       FONAMENT.md §«El recorregut». La tanda i cada comanda avancen per aquests passos, en aquest ordre, i cap acció (de
+       tanda, de paquet, de ruta o de mòdul) no se'n pot saltar cap. Un pas d'un mòdul (`modul`) només hi és si el panell
+       l'hi ha connectat (`connectaModuls`) i el mòdul és encès; a més, només compta mentre la tanda és a l'estat d'abans
+       del pas (si el mòdul s'encén quan la tanda ja l'ha passat, no la fa tornar enrere). Sense panell (la web), la
+       tanda només té els seus estats. */
+    let modulConnectat = () => false;
+    const actiuRec = (id) => {
+      try {
+        return !!modulConnectat(id);
+      } catch (x) {
+        return false;
+      }
+    };
+    const dm = (e, id) => (e.dadesModuls && e.dadesModuls[id]) || {};
+    const ordreEstat = (s) => dades.estatsTanda.indexOf(s);
+    const comandesT = (e, t) => e.comandes.filter((c) => c.tandaId === t.id);
+    const carnDemanadaDe = (e, t) => !!(dm(e, 'escorxador').avisades || {})[t.id];
+    // La carn demanada ja hi comptava aquesta comanda? (l'escorxador apunta quines surten quan es demana; si no ho diu, val
+    // que en tingui els kg reals)
+    const comptadaALaCarn = (e, t, c) => {
+      const d = dm(e, 'escorxador');
+      const ll = (d.demanades || {})[t.id];
+      return ll ? ll.includes(c.id) : !!(((d.kgReals || {})[t.id] || {})[c.id]);
+    };
+    const kgRealsDe = (e, t) => !!(dm(e, 'escorxador').kgReals || {})[t.id];
+    const paquetDe = (e, id) => (dm(e, 'enviaments').paquets || {})[id] || null;
+    const estatPaquet = (p) => (p && p.historial && p.historial.length ? p.historial[p.historial.length - 1].estat : '');
+    // EL FILTRE de les comandes que surten amb una tanda: ni les retingudes (sense pagar) ni les retornades. El fan servir
+    // totes les llistes, comptes i correus (transport, ruta, etiquetes, escorxador, kg, correus de la tanda).
+    const surtenT = (e, t) => comandesT(e, t).filter((c) => surtAmbTanda(c));
+    const noSurtenT = (e, t) => comandesT(e, t).filter((c) => !surtAmbTanda(c));
+    // Per què no surt (es veu a la tanda, a part)
+    const motiuNoSurt = (c) => (viaDe(c) === 'fora' ? 'Diners retornats: no surt' : c.pagament === 'fallit' ? 'No s’ha pogut cobrar: no surt fins que pagui' : 'Encara no ha pagat: no surt fins que pagui');
+    // Només les que surten amb el transportista
+    const senseEtiqueta = (e, t) => surtenT(e, t).filter((c) => viaDe(c) === 'paquet' && !c.entregada && !paquetDe(e, c.id));
+
+    // La tanda. `estat`: el pas és un estat de la tanda (`dades.estatsTanda`). `modul`: el pas és d'un mòdul; `aplica`:
+    // si toca a aquesta tanda; `fet`: si ja s'ha fet. `requereix`: el que ha de ser cert per poder fer el pas.
+    const RECORREGUT_TANDA = [
+      { id: 'oberta', estat: 'oberta' },
+      { id: 'tancada', estat: 'completa' },
+      { id: 'carn-demanada', modul: 'escorxador', aplica: (e, t) => lotsSurten(e, t) > 0, fet: carnDemanadaDe },
+      { id: 'kg-reals', modul: 'escorxador', aplica: (e, t) => lotsSurten(e, t) > 0, fet: kgRealsDe },
+      { id: 'preparacio', estat: 'preparacio' },
+      { id: 'etiquetes', modul: 'enviaments', fet: (e, t) => !senseEtiqueta(e, t).length },
+      { id: 'enviada', estat: 'enviada' },
+      { id: 'entregada', estat: 'entregada', requereix: (e, t) => !entregaPendent(e, t.id).length },
+    ];
+    // La comanda: cobrament → lliurament → entregada → opinió. El lliurament és d'un mòdul (paquet o ruta) o de la tanda.
+    // `seguent`: des de cada estat, on es pot anar; `tanda`: en quins estats de la tanda es pot fer.
+    const LLIURAMENT = {
+      paquet: {
+        modul: 'enviaments',
+        per: (c) => c.lliurament === 'transportista',
+        seguent: { '': ['preparat'], preparat: ['recollit'], recollit: ['en-cami'], 'en-cami': ['entregat', 'no-entregat'], 'no-entregat': ['en-cami'] },
+        tanda: { preparat: ['preparacio'], recollit: ['enviada'], 'en-cami': ['enviada'], entregat: ['enviada'], 'no-entregat': ['enviada'] },
+      },
+      ruta: {
+        modul: 'ruta',
+        per: (c) => c.lliurament === 'repartiment-propi' || c.lliurament === 'recull',
+        seguent: { '': ['entregada'] },
+        tanda: { entregada: ['enviada'] },
+      },
+    };
+    // Cobrament: d'on a on es pot passar (el fa el mòdul de pagaments; no atura la tanda, però sense ell no hi ha factura)
+    const COBRAMENT = { pendent: ['pagat'], fallit: ['pagat'], pagat: ['fallit', 'retornat'], recurrent: ['fallit', 'retornat'], retornat: [] };
+    const cobrada = (c) => c.pagament === 'pagat' || c.pagament === 'recurrent';
+    // L'entrega en mà: la ruta, la recull a la granja o (sense tanda) es queda el dia. Només així es pot cobrar en efectiu.
+    const enMa = (c) => c.lliurament === 'repartiment-propi' || c.lliurament === 'recull' || !c.tandaId;
+    // Decisió d'en Lluc (05/11/2026): una comanda amb el cobrament fallit, o sense pagar (enllaç o «per decidir»), no surt
+    // fins que paga. Es queda a la tanda, sense etiqueta, enviament ni ruta, i la tanda pot sortir sense ella. L'efectiu en
+    // mà no la reté: es cobra en entregar. Sense el mòdul de pagaments el cobrament no es porta: no es reté res.
+    const retornada = (c) => c.pagament === 'retornat';
+    const lotsSurten = (e, t) => surtenT(e, t).reduce((n, c) => n + c.places, 0);
+    const retinguda = (c) => actiuRec('pagaments') && !c.entregada && (c.pagament === 'fallit' || (c.pagament === 'pendent' && !(c.metodePagament === 'efectiu' && enMa(c))));
+    // L'ordre de tots els passos junts (el de les tasques d'una tanda a «Avui»). La factura no atura res: va quan la carn
+    // ja és lliurada (es pot emetre abans, en tenir els kg i el cobrament, però no passa per davant de la tanda)
+    const ORDRE_PASSOS = ['cobrament', 'oberta', 'tancada', 'carn-demanada', 'kg-reals', 'preparacio', 'etiquetes', 'enviada', 'lliurament', 'entregada', 'factura', 'opinio'];
+
+    // Els passos que compten ara per a la tanda (els dels mòduls apagats o ja passats, fora)
+    function passosDe(e, t) {
+      let anterior = null;
+      const sortida = [];
+      for (const p of RECORREGUT_TANDA) {
+        if (p.estat) {
+          anterior = p.estat;
+          sortida.push(p);
+        } else if (actiuRec(p.modul) && t.estat === anterior && (!p.aplica || p.aplica(e, t))) sortida.push(p);
+      }
+      return sortida;
+    }
+    const pasFet = (e, t, p) => (p.estat ? ordreEstat(t.estat) >= ordreEstat(p.estat) : p.fet(e, t));
+    // El pas que toca ara (el primer que no s'ha fet), o null si la tanda ja és entregada
+    const pasDe = (e, t) => passosDe(e, t).find((p) => !pasFet(e, t, p)) || null;
+    function potPassar(e, t, nou) {
+      if (!dades.estatsTanda.includes(nou)) return err('estat_invalid');
+      if (nou === t.estat) return err('mateix_estat');
+      if (ordreEstat(nou) < ordreEstat(t.estat)) return err('estat_enrere');
+      const p = pasDe(e, t);
+      if (!p || p.estat !== nou) return err(p && p.modul ? 'pas_pendent' : 'salta_pas', { pas: p ? p.id : null });
+      if (p.requereix && !p.requereix(e, t)) return err('entrega_pendent', { comandes: entregaPendent(e, t.id) });
+      return { ok: true };
+    }
+
+    // Qui entrega la comanda: 'paquet' (Enviaments encès), 'ruta' (Ruta encesa), 'tanda' (la tanda, en passar a
+    // «Entregada»), 'a-part' (sense tanda: entrega per acordar), 'retinguda' (no surt fins que pagui) o 'fora' (pagament
+    // retornat: ha sortit del recorregut). Quan la tanda surt («Enviada»), la via de cada comanda queda fixada (`c.via`):
+    // un mòdul que s'encén més tard no fa tornar enrere la tanda ni les seves comandes.
+    const viaDe = (c) => {
+      // Ja ha sortit: es segueix per la seva via fins que arriba (si es retornen els diners amb el paquet en camí, el
+      // paquet no desapareix: la tanda l'espera i, en arribar, no rep cap correu d'entrega ni d'opinió)
+      if (c.via && c.via !== 'retinguda') return c.via;
+      if (retornada(c)) return 'fora';
+      if (c.via) return c.via;
+      if (retinguda(c)) return 'retinguda';
+      for (const k of Object.keys(LLIURAMENT)) if (actiuRec(LLIURAMENT[k].modul) && LLIURAMENT[k].per(c)) return k;
+      return c.tandaId ? 'tanda' : 'a-part';
+    };
+    // Surt amb la tanda (no és retinguda ni retornada)
+    const surtAmbTanda = (c) => viaDe(c) !== 'retinguda' && viaDe(c) !== 'fora';
+    // Comandes de la tanda que un mòdul encara ha d'entregar: mentre n'hi hagi, la tanda no pot passar a «Entregada»
+    const entregaPendent = (e, tandaId) => e.comandes.filter((x) => x.tandaId === tandaId && !x.entregada && (viaDe(x) === 'paquet' || viaDe(x) === 'ruta')).map((x) => x.id);
+    // Cap mòdul no es pot apagar amb coses a mig fer: l'estat d'entrega (o els kg que s'esperen) no es perd mai
+    const PENDENTS_MODUL = {
+      enviaments: (e) => e.comandes.filter((c) => !c.entregada && viaDe(c) === 'paquet' && ['preparat', 'recollit', 'en-cami', 'no-entregat'].includes(estatPaquet(paquetDe(e, c.id)))).map((c) => c.id),
+      ruta: (e) => e.comandes.filter((c) => !c.entregada && viaDe(c) === 'ruta' && (tandaDe(e, c.tandaId) || {}).estat === 'enviada').map((c) => c.id),
+      escorxador: (e) => e.tandes.filter((t) => t.estat === 'completa' && carnDemanadaDe(e, t) && !kgRealsDe(e, t)).map((t) => t.id),
+      // Cobraments per fer (fallits, enllaços sense pagar, efectiu per cobrar): sense el mòdul ningú no els podria cobrar
+      pagaments: (e) => e.comandes.filter((c) => c.pagament === 'pendent' || c.pagament === 'fallit').map((c) => c.id),
+    };
+
+    // Lliurament d'una comanda: per on va, en quin punt és i què pot venir ara
+    function lliuramentDe(e, c) {
+      const via = viaDe(c);
+      const L = LLIURAMENT[via];
+      const t = tandaDe(e, c.tandaId);
+      // Sense tanda (canal, entrega per acordar): es queda el dia amb el comprador i, quan la té, es marca entregada
+      if (via === 'a-part') return { via, estat: c.entregada ? 'entregada' : '', seguents: c.entregada ? [] : ['entregada'] };
+      if (!L) return { via, estat: c.entregada ? 'entregada' : '', seguents: [] };
+      const estat = via === 'paquet' ? estatPaquet(paquetDe(e, c.id)) : c.entregada ? 'entregada' : '';
+      const seguents = c.entregada ? [] : (L.seguent[estat] || []).filter((s) => t && (L.tanda[s] || []).includes(t.estat));
+      return { via, estat, seguents };
+    }
+
+    // La factura d'una comanda: cobrada i, si l'escorxador és encès, amb els kg reals (mentre la tanda els espera)
+    function potFacturar(e, c) {
+      if ((dm(e, 'factures').emeses || {})[c.id]) return err('ja_facturada');
+      if (!cobrada(c)) return err('no_cobrada');
+      const t = tandaDe(e, c.tandaId);
+      if (t && actiuRec('escorxador')) {
+        const kg = ((dm(e, 'escorxador').kgReals || {})[t.id] || {})[c.id];
+        if (!kg && (ordreEstat(t.estat) < ordreEstat('preparacio') || carnDemanadaDe(e, t))) return err('falten_kg', { carnDemanada: carnDemanadaDe(e, t), tandaNumero: t.numero });
+      }
+      return { ok: true };
+    }
+
+    // Marca una comanda com a entregada i, si era l'última de la tanda enviada, la tanda passa sola a «Entregada».
+    // Torna els ids de les comandes que acaben d'arribar (per avisar `alEntregar` un cop desat).
+    function entrega(e, c, origen) {
+      const quan = iso(0);
+      c.entregada = quan;
+      c.historial.push({ data: quan, tipus: 'entregada' });
+      const t = tandaDe(e, c.tandaId);
+      if (t && t.estat === 'enviada' && comandesT(e, t).every((x) => x.entregada || !surtAmbTanda(x))) {
+        const generats = posaEstat(e, t, 'entregada', false, [c.id]);
+        afegeixEsdeveniment(e, { tipus: 'tanda-estat', origen: origen || 'panell', tandaId: t.id, dades: { numero: t.numero, de: 'enviada', a: 'entregada', correus: generats.length }, vist: true });
+      }
+      return [c.id];
+    }
+
     // Canvi d'estat amb efectes: historial de cada comprador i un correu per comprador (excepte `oberta`).
-    function posaEstat(e, t, nou, auto) {
+    // `araEntregades`: les comandes que s'entreguen en aquest mateix moment (per al correu d'entrega, que és un de sol).
+    function posaEstat(e, t, nou, auto, araEntregades) {
       const anterior = t.estat;
       t.estat = nou;
       const generats = [];
       const quan = iso(0);
+      // Quan la tanda surt, la via de cada comanda queda fixada (un mòdul que s'encén més tard no la fa recular)
+      if (nou === 'enviada') for (const c of comandesT(e, t)) c.via = viaDe(c);
+      const ara = new Set(araEntregades || []);
       for (const c of e.comandes.filter((x) => x.tandaId === t.id)) {
         c.historial.push({ data: quan, tipus: 'estat-tanda', tandaId: t.id, estat: nou });
-        if (nou === 'oberta') continue;
         if (auto && nou === 'completa' && !dades.correus.avisaCompletaAutomatica) continue;
+        if (!rebCorreuEstat(e, t, nou, c, ara)) continue;
         generats.push(afegeixCorreu(e, 'tanda-' + nou, c, t, { motiu: 'canvi-estat-tanda', estatAnterior: anterior, estatNou: nou }).id);
       }
       return generats;
+    }
+    // Qui rep el correu d'un canvi d'estat de la tanda. `ara`: les que s'entreguen en aquest mateix moment.
+    function rebCorreuEstat(e, t, nou, c, ara) {
+      if (nou === 'oberta') return false;
+      if (!c.client.email || c.lliurament === 'recull') return false; // per telèfon sense correu, o la recull: ho sap pel telèfon
+      // Només les que surten: a la retinguda no se li promet res («aviat la començarem a preparar», «ha sortit»), i la
+      // retornada ja no és de la tanda (ni tan sols si els diners es retornen amb el paquet en camí)
+      if (!surtAmbTanda(c) || retornada(c)) return false;
+      // «Ja tens la comanda a casa» només a qui la té de veritat (mai a un paquet que no ha arribat), i un sol correu
+      // d'entrega per comprador: si ja ha rebut el de l'opinió («ja és a casa»), o el rebrà ara mateix, aquest no
+      if (nou === 'entregada' && !c.entregada && !ara.has(c.id)) return false;
+      if (nou === 'entregada' && e.correus.some((x) => x.comandaId === c.id && x.plantilla === 'opinio-demanada')) return false;
+      if (nou === 'entregada' && ara.has(c.id) && actiuRec('opinions')) return false;
+      // Un sol avís per estat i tanda (una tanda plena que es buida i es torna a omplir no el repeteix)
+      if (e.correus.some((x) => x.plantilla === 'tanda-' + nou && x.comandaId === c.id && x.tandaId === t.id)) return false;
+      return true;
     }
 
     // Manté les invariants després de qualsevol canvi: una tanda plena passa a `completa` (i avisa), una
@@ -347,7 +608,8 @@
             afegeixEsdeveniment(e, { tipus: 'tanda-plena', origen: origen || 'web', tandaId: t.id, dades: { numero: t.numero, lots: lotsDe(e, t.id), places: t.places } });
             correus.push(...posaEstat(e, t, 'completa', true));
             canvi = true;
-          } else if (t.estat === 'completa' && !plena && !t.tancadaManual && t.dataLimit >= avui()) {
+          } else if (t.estat === 'completa' && !plena && !t.tancadaManual && t.dataLimit >= avui() && !carnDemanadaDe(e, t)) {
+            // (si ja s'ha demanat la carn a l'escorxador, la tanda no torna a obrir-se: el que s'ha demanat ja no canvia)
             t.estat = 'oberta';
             canvi = true;
           }
@@ -422,6 +684,26 @@
       return { ok: Object.keys(errors).length === 0, errors, client: net };
     }
 
+    // Comprador d'una comanda per telèfon: nom i telèfon sempre; adreça només si no la recull; el correu és opcional.
+    function validaClientTelefon(c, recull) {
+      const x = c || {};
+      const s = (v) => String(v === undefined || v === null ? '' : v).trim();
+      const errors = {};
+      if (!s(x.nom)) errors.nom = 'buit';
+      const tel = s(x.telefon).replace(/[\s.\-]/g, '').replace(/^(\+34|0034)/, '');
+      if (!tel) errors.telefon = 'buit';
+      else if (!/^[6-9]\d{8}$/.test(tel)) errors.telefon = 'format';
+      if (s(x.email) && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(s(x.email))) errors.email = 'format';
+      const cp = recull ? { cp: '' } : dades.validaCP(x.cp);
+      if (!recull) {
+        if (!s(x.adreca)) errors.adreca = 'buit';
+        if (!cp.valid) errors.cp = cp.motiu;
+        if (!s(x.poblacio)) errors.poblacio = 'buit';
+      }
+      const net = { nom: s(x.nom), cognoms: s(x.cognoms), email: s(x.email), telefon: s(x.telefon), adreca: recull ? '' : s(x.adreca), cp: cp.cp, poblacio: recull ? '' : s(x.poblacio), notes: s(x.notes) };
+      return { ok: Object.keys(errors).length === 0, errors, client: net };
+    }
+
     /* ---------- Persistència ---------- */
 
     function estatValid(x, versio) {
@@ -454,6 +736,13 @@
         delete t.dataGuardada;
       }
       for (const c of x.comandes) {
+        if (c.origen === undefined) c.origen = 'web';
+        if (c.entregada === undefined) {
+          const t = x.tandes.find((o) => o.id === c.tandaId);
+          const pas = (c.historial || []).filter((h) => h.tipus === 'estat-tanda' && h.estat === 'entregada').pop();
+          c.entregada = t && t.estat === 'entregada' ? (pas ? pas.data : c.creada) : null;
+        }
+        if (c.desviada === undefined) c.desviada = null;
         if (c.producte === undefined) c.producte = 'lot';
         if (c.places === undefined) c.places = c.lots;
         if (c.metodePagament === undefined) c.metodePagament = dades.pagament.metodes[0];
@@ -543,6 +832,22 @@
       return r;
     }
 
+    // Una comanda retinguda (no ha sortit amb la seva tanda) va a la primera tanda que l'admeti (o a una de nova, com una
+    // comanda que no hi cap). Torna { de, a } (números de tanda) o null si no s'ha pogut.
+    function mouASeguent(e, c) {
+      const o = tandaDe(e, c.tandaId);
+      const a = assigna(e, c.places);
+      if (!a.ok) return null;
+      const d = tandaDe(e, a.tandaId);
+      c.tandaId = d.id;
+      delete c.via;
+      c.historial.push({ data: iso(0), tipus: 'moguda', de: o ? o.id : null, a: d.id });
+      // Li diem on va ara (no ha sortit amb la seva tanda i ja ha pagat)
+      if (c.client.email) afegeixCorreu(e, 'comanda-moguda', c, d, { motiu: 'moguda', dadesExtra: { de: o ? o.numero : null, pagada: true } });
+      normalitza(e);
+      return { de: o ? o.numero : null, a: d.numero };
+    }
+
     /* ---------- Vistes (còpies: la UI no pot embrutar l'estat) ---------- */
 
     // L'estat d'una comanda és el de la seva tanda; sense tanda (canals per defecte): 'per-acordar'.
@@ -579,6 +884,25 @@
       const tancada = !admetComandes(t);
       return Object.assign(copia(t), { ocupacio: o, vencuda: vencuda(t), tancada, tancadaPer: tancada ? (o.plena ? 'plena' : 'data-limit') : null });
     };
+
+    // Qui vulgui fer alguna cosa en el moment exacte en què una comanda s'entrega (p. ex. demanar l'opinió) s'hi apunta amb
+    // `alEntregar(fn)`; `fn(comanda)` s'executa un cop per comanda, un cop acabat el canvi. Si no hi ha ningú apuntat, res.
+    const ambEntrega = new Set();
+    // Es pot donar per entregada (per la tanda) si ja ho és, o si cap mòdul la té entre mans (paquet o ruta: `viaDe`)
+    const potDonarPerEntregada = (c) => !!c.entregada || (viaDe(c) !== 'paquet' && viaDe(c) !== 'ruta');
+    function avisaEntregades(ids) {
+      for (const id of ids || []) {
+        const c = estat.comandes.find((x) => x.id === id);
+        if (!c) continue;
+        for (const fn of Array.from(ambEntrega)) {
+          try {
+            fn(vistaComanda(c));
+          } catch (e) {
+            /* un oient que falla no ha d'aturar els altres */
+          }
+        }
+      }
+    }
 
     /* ---------- API pública ---------- */
 
@@ -654,44 +978,208 @@
 
       // Les dues llistes del panell per a una tanda, ordenades per codi postal: les que reparteix ell mateix
       // (`repartimentPropi`) i les que porta el transportista (`transportista`), amb el recompte de lots de cada una.
+      // Només hi ha les que surten (el filtre únic, `surtenT`); les retingudes i les retornades van a part (`noSurten`,
+      // amb el motiu).
       llistesEntrega(id) {
-        const ordenades = estat.comandes
-          .filter((c) => c.tandaId === id)
-          .sort((a, b) => (a.client.cp < b.client.cp ? -1 : a.client.cp > b.client.cp ? 1 : a.id < b.id ? -1 : 1))
-          .map(vistaComanda);
+        const t = tandaDe(estat, id);
+        const perCp = (a, b) => (a.client.cp < b.client.cp ? -1 : a.client.cp > b.client.cp ? 1 : a.id < b.id ? -1 : 1);
+        const ordenades = (t ? surtenT(estat, t) : []).slice().sort(perCp).map(vistaComanda);
         const llista = (tipus) => {
           const comandes = ordenades.filter((c) => c.lliurament === tipus);
           return { comandes, lots: comandes.reduce((s, c) => s + c.places, 0) };
         };
-        return { repartimentPropi: llista('repartiment-propi'), transportista: llista('transportista') };
+        const noSurten = (t ? noSurtenT(estat, t) : []).slice().sort(perCp).map((c) => Object.assign(vistaComanda(c), { motiuNoSurt: motiuNoSurt(c) }));
+        return { repartimentPropi: llista('repartiment-propi'), transportista: llista('transportista'), recull: llista('recull'), noSurten };
+      },
+      // EL FILTRE: les comandes que surten amb la tanda (ni retingudes ni retornades), i les que no, amb el motiu
+      comandesQueSurten(id) {
+        const t = tandaDe(estat, id);
+        return t ? surtenT(estat, t).map(vistaComanda) : [];
+      },
+      comandesQueNoSurten(id) {
+        const t = tandaDe(estat, id);
+        return t ? noSurtenT(estat, t).map((c) => Object.assign(vistaComanda(c), { motiuNoSurt: motiuNoSurt(c) })) : [];
+      },
+      // Lots que surten amb la tanda (el que es demana a l'escorxador i el que s'apunta en kg)
+      lotsQueSurten(id) {
+        const t = tandaDe(estat, id);
+        return t ? lotsSurten(estat, t) : 0;
+      },
+      // Quants correus enviarà de veritat el canvi d'estat (la mateixa funció que els envia): els de la tanda i, en
+      // entregar, els de l'opinió de les que s'entreguen ara
+      correusDeCanvi(id, nou) {
+        const t = tandaDe(estat, id);
+        if (!t) return 0;
+        const ara = nou === 'entregada' ? comandesT(estat, t).filter((c) => surtAmbTanda(c) && !c.entregada) : [];
+        const araIds = new Set(ara.map((c) => c.id));
+        let n = comandesT(estat, t).filter((c) => rebCorreuEstat(estat, t, nou, c, araIds)).length;
+        if (nou === 'entregada' && actiuRec('opinions')) {
+          n += ara.filter((c) => c.client.email && c.lliurament !== 'recull' && !retornada(c) && !estat.correus.some((x) => x.comandaId === c.id && x.plantilla === 'opinio-demanada')).length;
+        }
+        return n;
       },
 
-      // Estats a què es pot passar des de l'actual (només endavant).
+      // L'estat a què es pot passar ara (el pas següent del recorregut), o [] si abans cal fer un pas d'un mòdul.
       estatsPossibles(id) {
         const t = tandaDe(estat, id);
         if (!t) return [];
-        const i = dades.estatsTanda.indexOf(t.estat);
-        return dades.estatsTanda.slice(i + 1);
+        const p = pasDe(estat, t);
+        return p && p.estat && potPassar(estat, t, p.estat).ok ? [p.estat] : [];
+      },
+
+      /* ----- El recorregut (taula a dalt): el que cal fer ara i el que es pot fer ----- */
+
+      // El panell hi connecta els mòduls: `fn(id)` diu si un mòdul és encès (els seus passos compten).
+      connectaModuls(fn) {
+        modulConnectat = typeof fn === 'function' ? fn : () => false;
+      },
+      recorregut: () => ({ tanda: RECORREGUT_TANDA.map((p) => ({ id: p.id, estat: p.estat || null, modul: p.modul || null })), lliurament: copia(Object.keys(LLIURAMENT).reduce((o, k) => Object.assign(o, { [k]: { modul: LLIURAMENT[k].modul, seguent: LLIURAMENT[k].seguent, tanda: LLIURAMENT[k].tanda } }), {})), cobrament: copia(COBRAMENT), ordre: ORDRE_PASSOS.slice() }),
+      ordrePas: (id) => ORDRE_PASSOS.indexOf(id),
+      // El pas que toca ara a la tanda: { id, estat?, modul? } o null (ja és entregada)
+      pasTanda(id) {
+        const t = tandaDe(estat, id);
+        const p = t ? pasDe(estat, t) : null;
+        return p ? { id: p.id, estat: p.estat || null, modul: p.modul || null } : null;
+      },
+      potPassar(id, nou) {
+        const t = tandaDe(estat, id);
+        return t ? potPassar(estat, t, nou) : err('tanda_inexistent');
+      },
+      // Lliurament d'una comanda: { via: 'paquet'|'ruta'|'tanda'|'a-part', estat, seguents }
+      lliurament(comandaId) {
+        const c = estat.comandes.find((x) => x.id === comandaId);
+        return c ? lliuramentDe(estat, c) : null;
+      },
+      potFacturar(comandaId) {
+        const c = estat.comandes.find((x) => x.id === comandaId);
+        return c ? potFacturar(estat, c) : err('comanda_inexistent');
+      },
+      // Mou una comanda d'una tanda que encara no ha començat a preparar-se (ni ha demanat la carn)
+      potMoure(comandaId) {
+        const c = estat.comandes.find((x) => x.id === comandaId);
+        if (!c) return err('comanda_inexistent');
+        const t = tandaDe(estat, c.tandaId);
+        if (!t) return err('sense_tanda');
+        // Una retornada ja no és de cap tanda: no es mou enlloc
+        if (viaDe(c) === 'fora') return err('retornada');
+        // La que no surt fins que pagui (retinguda) es pot moure a la tanda següent en qualsevol moment
+        if (viaDe(c) === 'retinguda') return { ok: true };
+        if (t.estat !== 'oberta' && t.estat !== 'completa') return err('tanda_origen_tancada');
+        if (actiuRec('escorxador') && carnDemanadaDe(estat, t)) return err('carn_demanada');
+        return { ok: true };
+      },
+      // Si el pas `pas` del recorregut es pot fer ara. ref: { tandaId?, comandaId? }. El fan servir els botons i les tasques.
+      potFer(pas, ref) {
+        const r = ref || {};
+        const t = tandaDe(estat, r.tandaId || ((estat.comandes.find((x) => x.id === r.comandaId) || {}).tandaId));
+        const c = r.comandaId ? estat.comandes.find((x) => x.id === r.comandaId) : null;
+        const no = (motiu) => err(motiu || 'no_toca', { pas });
+        if (pas === 'cobrament') return c && (COBRAMENT[c.pagament] || []).includes('pagat') ? { ok: true } : no();
+        if (pas === 'factura') {
+          if (c) return potFacturar(estat, c);
+          return t && comandesT(estat, t).some((x) => potFacturar(estat, x).ok) ? { ok: true } : no();
+        }
+        if (pas === 'lliurament') {
+          if (c) return lliuramentDe(estat, c).seguents.length ? { ok: true } : no();
+          return t && comandesT(estat, t).some((x) => lliuramentDe(estat, x).seguents.length) ? { ok: true } : no();
+        }
+        if (!t) return no('tanda_inexistent');
+        if (pas === 'etiquetes') return actiuRec('enviaments') && t.estat === 'preparacio' && senseEtiqueta(estat, t).length ? { ok: true } : no();
+        if (pas === 'kg-reals') return actiuRec('escorxador') && t.estat === 'completa' && carnDemanadaDe(estat, t) ? { ok: true } : no();
+        const p = pasDe(estat, t);
+        if (pas === 'carn-demanada') return p && p.id === 'carn-demanada' ? { ok: true } : no();
+        const st = RECORREGUT_TANDA.find((x) => x.id === pas);
+        if (st && st.estat) return potPassar(estat, t, st.estat);
+        return no('pas_desconegut');
+      },
+      // Coses a mig fer d'un mòdul (si n'hi ha, no es pot apagar): ids de comandes o de tandes
+      pendentsDeModul: (id) => (PENDENTS_MODUL[id] && actiuRec(id) ? PENDENTS_MODUL[id](estat) : []),
+      // Si la comanda no surt fins que pagui (cobrament fallit o sense pagar; decisió d'en Lluc, 05/11/2026)
+      retinguda(comandaId) {
+        const c = estat.comandes.find((x) => x.id === comandaId);
+        return !!c && viaDe(c) === 'retinguda';
+      },
+      // Les comandes de la tanda que encara necessiten etiqueta (les que surten amb el transportista)
+      senseEtiqueta: (tandaId) => {
+        const t = tandaDe(estat, tandaId);
+        return t ? senseEtiqueta(estat, t).map((c) => c.id) : [];
+      },
+
+      // Paquet (Enviaments): un pas del recorregut del paquet. 'preparat' fa l'etiqueta (número de seguiment de mostra);
+      // 'entregat' entrega la comanda. Refusa el que no toca (paquet que no s'ha recollit, tanda que encara no ha sortit…).
+      mouPaquet(comandaId, nou) {
+        carrega();
+        const c = estat.comandes.find((x) => x.id === comandaId);
+        if (!c) return err('comanda_inexistent');
+        const l = lliuramentDe(estat, c);
+        if (l.via !== 'paquet') return err('sense_paquet');
+        if (!l.seguents.includes(nou)) return err('pas_no_permes', { estat: l.estat, nou });
+        const r = muta('paquet', () => {
+          const cc = estat.comandes.find((x) => x.id === comandaId);
+          const env = (estat.dadesModuls.enviaments = estat.dadesModuls.enviaments || {});
+          env.paquets = env.paquets || {};
+          if (nou === 'preparat') {
+            env.comptador = (env.comptador || 0) + 1;
+            env.paquets[cc.id] = { seguiment: 'SEG-' + String(900000 + env.comptador * 37), historial: [] };
+          }
+          env.paquets[cc.id].historial.push({ estat: nou, data: iso(0) });
+          const entregades = nou === 'entregat' ? entrega(estat, cc, 'transportista') : [];
+          return { ok: true, estat: nou, seguiment: env.paquets[cc.id].seguiment, entregades };
+        });
+        if (r.ok) avisaEntregades(r.entregades);
+        return r;
+      },
+      // Les etiquetes d'una tanda: un paquet per cada comanda amb transportista que encara no en té
+      fesEtiquetes(tandaId) {
+        carrega();
+        const t = tandaDe(estat, tandaId);
+        if (!t) return err('tanda_inexistent');
+        if (!m.potFer('etiquetes', { tandaId }).ok) return err('no_toca', { pas: 'etiquetes' });
+        return muta('etiquetes', () => {
+          const env = (estat.dadesModuls.enviaments = estat.dadesModuls.enviaments || {});
+          env.paquets = env.paquets || {};
+          env.etiquetes = env.etiquetes || {};
+          const fets = [];
+          for (const c of senseEtiqueta(estat, tandaDe(estat, tandaId))) {
+            env.comptador = (env.comptador || 0) + 1;
+            env.paquets[c.id] = { seguiment: 'SEG-' + String(900000 + env.comptador * 37), historial: [{ estat: 'preparat', data: iso(0) }] };
+            fets.push(c.id);
+          }
+          env.etiquetes[tandaId] = iso(0);
+          return { ok: true, n: fets.length, comandes: fets };
+        });
       },
 
       canviaEstatTanda(id, nou) {
-        const ordre = dades.estatsTanda;
-        if (!ordre.includes(nou)) return err('estat_invalid');
+        if (!dades.estatsTanda.includes(nou)) return err('estat_invalid');
         carrega();
         const t = tandaDe(estat, id);
         if (!t) return err('tanda_inexistent');
-        if (nou === t.estat) return err('mateix_estat');
-        if (ordre.indexOf(nou) < ordre.indexOf(t.estat)) return err('estat_enrere');
-        return muta('estat-tanda', () => {
+        // El recorregut: només el pas que toca ara (cap salt, cap pas d'un mòdul a mig fer, cap entrega pendent)
+        const pot = potPassar(estat, t, nou);
+        if (!pot.ok) return pot;
+        const r = muta('estat-tanda', () => {
           const tt = tandaDe(estat, id);
           const abans = tt.estat;
           if (nou === 'completa') tt.tancadaManual = true;
-          const generats = posaEstat(estat, tt, nou, false);
+          // Una tanda entregada vol dir que totes les seves comandes ho són (les que cap mòdul entrega, ara)
+          const entregades = [];
+          if (nou === 'entregada') {
+            const quan = iso(0);
+            for (const c of estat.comandes.filter((x) => x.tandaId === tt.id && !x.entregada && surtAmbTanda(x))) {
+              c.entregada = quan;
+              c.historial.push({ data: quan, tipus: 'entregada' });
+              entregades.push(c.id);
+            }
+          }
+          const generats = posaEstat(estat, tt, nou, false, entregades);
           // El canvi el fa el pastor: ja el coneix, per això surt com a vist
           afegeixEsdeveniment(estat, { tipus: 'tanda-estat', origen: 'panell', tandaId: tt.id, dades: { numero: tt.numero, de: abans, a: nou, correus: generats.length }, vist: true });
           const mes = normalitza(estat, 'panell');
-          return { ok: true, tanda: vistaTanda(tt), correus: generats.concat(mes) };
+          return { ok: true, tanda: vistaTanda(tt), correus: generats.concat(mes), entregades };
         });
+        if (r.ok) avisaEntregades(r.entregades);
+        return r;
       },
 
       // Obre una tanda extra (el pastor). `dataLimit` ('AAAA-MM-DD') és opcional: per defecte, la darrera + el període.
@@ -780,16 +1268,27 @@
         const lots = Number(x.lots);
         carrega();
         if (!estat.config.presentacio) return err('sense_presentacio');
-        const v = validaClient(x.client);
-        const q = validaQuantitat(x.producte || 'lot', lots);
-        if (!q.ok) return q;
-        // Forma de pagament (simulada): només les de `dades.pagament.metodes` (targeta, apple-pay, google-pay).
-        const metodePagament = x.metodePagament === undefined ? dades.pagament.metodes[0] : x.metodePagament;
-        if (!dades.pagament.metodes.includes(metodePagament)) return err('metode_pagament_invalid', { metodePagament });
-        if (!v.ok) return err('client_invalid', { errors: v.errors });
         // D'on ve la comanda: el full de compra de la web (per defecte) o, per a un mòdul, una altra via
         const origen = x.origen === undefined ? 'web' : x.origen;
         if (!dades.esdeveniments.origens.includes(origen)) return err('origen_invalid', { origen });
+        // Per telèfon (mòdul «comandes per telèfon»): menys dades (el correu és opcional; sense adreça si la recull) i el
+        // cobrament queda «pendent» fins que es cobra
+        const telefon = origen === 'telefon';
+        const recull = telefon && !!x.recull;
+        const v = telefon ? validaClientTelefon(x.client, recull) : validaClient(x.client);
+        const q = validaQuantitat(x.producte || 'lot', lots);
+        if (!q.ok) return q;
+        // Forma de pagament (simulada): només les de `dades.pagament.metodes` (targeta, apple-pay, google-pay); per telèfon,
+        // les de `metodesTelefon` (pendent, efectiu, enllaç).
+        const permesos = telefon ? dades.pagament.metodesTelefon : dades.pagament.metodes;
+        const metodePagament = x.metodePagament === undefined ? permesos[0] : x.metodePagament;
+        if (!permesos.includes(metodePagament)) return err('metode_pagament_invalid', { metodePagament });
+        if (!v.ok) return err('client_invalid', { errors: v.errors });
+        // L'efectiu es cobra en entregar, en mà: amb el transportista no hi ha ningú per cobrar-lo
+        if (metodePagament === 'efectiu' && q.ocupa && !recull) {
+          const cost = dades.costEnviament(v.client.cp);
+          if (!cost.valid || cost.lliurament === 'transportista') return err('efectiu_nomes_en_ma');
+        }
         let sub = null;
         if (x.subscripcio) {
           if (q.producte !== 'lot') return err('subscripcio_nomes_lots');
@@ -813,8 +1312,11 @@
             t = tandaDe(w, a.tandaId);
             if (sub) sub.primeraTandaNumero = t.numero;
           }
-          const c = afegeixComanda(w, { client: v.client, producte: q.producte, lots, tandaId: t ? t.id : null, subscripcio: sub, nova: true, metodePagament });
-          const ids = [afegeixCorreu(w, 'comanda-pastor', c, t, { motiu: 'comanda-nova' }).id, afegeixCorreu(w, 'comanda-confirmacio', c, t, { motiu: 'comanda-nova' }).id];
+          // Si no hi cabia a la primera tanda oberta, la tanda on ha anat a parar la deixa apuntada (es veu a la tanda)
+          const desviada = q.ocupa && a.primera && a.tandaId !== a.primera.tandaId ? { tandaId: a.primera.tandaId, numero: a.primera.numero, lliures: a.primera.placesLliures } : null;
+          const c = afegeixComanda(w, { client: v.client, producte: q.producte, lots, tandaId: t ? t.id : null, subscripcio: sub, nova: true, metodePagament, origen, recull, desviada, pagament: telefon ? 'pendent' : 'pagat' });
+          // Per telèfon no es manen els correus de la web: ho ha parlat per telèfon. El correu de l'enllaç de pagament és del mòdul de pagaments.
+          const ids = telefon ? [] : [afegeixCorreu(w, 'comanda-pastor', c, t, { motiu: 'comanda-nova' }).id, afegeixCorreu(w, 'comanda-confirmacio', c, t, { motiu: 'comanda-nova' }).id];
           const dadesEv = dadesComandaNova(w, c);
           if (x.simulat) dadesEv.simulat = true;
           afegeixEsdeveniment(w, { tipus: 'comanda-nova', origen, comandaId: c.id, tandaId: t ? t.id : undefined, dades: dadesEv });
@@ -833,20 +1335,105 @@
         const origen = tandaDe(estat, c.tandaId);
         if (!origen) return err('sense_tanda'); // entrega per acordar: no és a cap tanda
         if (origen.id === desti.id) return err('mateixa_tanda');
-        if (origen.estat === 'enviada' || origen.estat === 'entregada') return err('tanda_origen_tancada');
+        const pot = m.potMoure(comandaId);
+        if (!pot.ok) return pot;
         if (!admetComandes(desti)) return err('tanda_desti_no_oberta');
         if (lliures(estat, desti) < c.places) return err('no_hi_caben', { placesLliures: lliures(estat, desti), lots: c.places });
         return muta('comanda-moguda', () => {
           const cc = estat.comandes.find((x) => x.id === comandaId);
           const d = tandaDe(estat, tandaId);
           const o = tandaDe(estat, cc.tandaId);
+          const eraRetinguda = viaDe(cc) === 'retinguda';
           cc.tandaId = d.id;
+          delete cc.via;
           if (cc.subscripcio) cc.subscripcio.primeraTandaNumero = d.numero;
           cc.historial.push({ data: iso(0), tipus: 'moguda', de: o.id, a: d.id });
+          // La que no ha sortit per no haver pagat: li diem a quina tanda va (com `mouRetinguda`)
+          if (eraRetinguda && cc.client.email) afegeixCorreu(estat, 'comanda-moguda', cc, d, { motiu: 'moguda', dadesExtra: { de: o.numero, pagada: false } });
           const correus = normalitza(estat);
           return { ok: true, comanda: vistaComanda(cc), correus };
         });
       },
+
+      // Una comanda retinguda (no surt fins que pagui) va a la tanda següent que l'admeti
+      mouRetinguda(comandaId) {
+        carrega();
+        const c = estat.comandes.find((x) => x.id === comandaId);
+        if (!c) return err('comanda_inexistent');
+        if (viaDe(c) !== 'retinguda' || !c.tandaId) return err('no_retinguda');
+        return muta('comanda-moguda', () => {
+          const cc = estat.comandes.find((x) => x.id === comandaId);
+          const o = tandaDe(estat, cc.tandaId);
+          // Una altra tanda oberta amb lloc, o una de nova (mai la mateixa)
+          const d = obertes(estat).find((t) => t.id !== cc.tandaId && lliures(estat, t) >= cc.places) || obreTanda(estat);
+          cc.tandaId = d.id;
+          delete cc.via;
+          cc.historial.push({ data: iso(0), tipus: 'moguda', de: o ? o.id : null, a: d.id });
+          // Li diem que no ha sortit amb la seva tanda i a quina va (sense prometre res: encara no ha pagat)
+          if (cc.client.email) afegeixCorreu(estat, 'comanda-moguda', cc, d, { motiu: 'moguda', dadesExtra: { de: o ? o.numero : null, pagada: false } });
+          normalitza(estat);
+          return { ok: true, comanda: vistaComanda(cc), de: o ? o.numero : null, a: d.numero };
+        });
+      },
+
+      // Cobrament d'una comanda: 'pagat', 'pendent', 'fallit' o 'retornat'. El mòdul de pagaments és qui ho fa servir.
+      setPagament(comandaId, nou) {
+        if (!['pagat', 'pendent', 'fallit', 'retornat'].includes(nou)) return err('pagament_invalid', { pagament: nou });
+        carrega();
+        const c = estat.comandes.find((x) => x.id === comandaId);
+        if (!c) return err('comanda_inexistent');
+        if (c.pagament === nou) return err('mateix_pagament');
+        if (!(COBRAMENT[c.pagament] || []).includes(nou)) return err('cobrament_no_permes', { de: c.pagament, a: nou });
+        return muta('pagament', () => {
+          const cc = estat.comandes.find((x) => x.id === comandaId);
+          const eraRetinguda = viaDe(cc) === 'retinguda';
+          cc.pagament = nou;
+          cc.historial.push({ data: iso(0), tipus: 'pagament', estat: nou });
+          // Ja no surt (retornada o retinguda) i la tanda encara es prepara: l'etiqueta que ja tenia no val
+          const t = tandaDe(estat, cc.tandaId);
+          const env = estat.dadesModuls.enviaments;
+          if (!surtAmbTanda(cc) && t && t.estat === 'preparacio' && env && env.paquets && estatPaquet(env.paquets[cc.id]) === 'preparat') delete env.paquets[cc.id];
+          // Paga quan la seva tanda ja ha sortit sense ella, o quan la carn ja s'ha demanat sense comptar-la: va a la tanda
+          // següent que l'admeti (la carn i els kg de la seva tanda ja no hi compten)
+          const tardana = t && (cc.via === 'retinguda' || (actiuRec('escorxador') && (carnDemanadaDe(estat, t) || ordreEstat(t.estat) >= ordreEstat('preparacio')) && !comptadaALaCarn(estat, t, cc)));
+          const moguda = eraRetinguda && nou === 'pagat' && tardana ? mouASeguent(estat, cc) : null;
+          return { ok: true, comanda: vistaComanda(cc), moguda };
+        });
+      },
+
+      // Una parada de la ruta (o una comanda a part) ha arribat al comprador. Una sola vegada per comanda. El paquet
+      // s'entrega amb `mouPaquet(id, 'entregat')` i la resta, amb la tanda («Entregada»): aquí es refusen.
+      marcaEntregada(comandaId) {
+        carrega();
+        const c = estat.comandes.find((x) => x.id === comandaId);
+        if (!c) return err('comanda_inexistent');
+        if (c.entregada) return { ok: true, jaEntregada: true, comanda: vistaComanda(c) };
+        const via = viaDe(c);
+        if (via === 'paquet') return err('entrega_per_paquet');
+        if (via === 'tanda') return err('entrega_per_tanda');
+        if (via === 'retinguda') return err('no_ha_pagat');
+        if (via === 'fora') return err('pagament_retornat');
+        if (via === 'ruta' && !lliuramentDe(estat, c).seguents.includes('entregada')) return err('tanda_no_enviada');
+        const r = muta('entregada', () => {
+          const cc = estat.comandes.find((x) => x.id === comandaId);
+          const entregades = entrega(estat, cc, 'panell');
+          return { ok: true, jaEntregada: false, comanda: vistaComanda(cc), entregades };
+        });
+        if (r.ok) avisaEntregades(r.entregades);
+        return r;
+      },
+      alEntregar(fn) {
+        ambEntrega.add(fn);
+        return () => ambEntrega.delete(fn);
+      },
+      // `true` si cap mòdul té la comanda pendent d'entregar (o ja és entregada)
+      potDonarPerEntregada(comandaId) {
+        const c = estat.comandes.find((x) => x.id === comandaId);
+        return !!c && potDonarPerEntregada(c);
+      },
+      // Ids de les comandes de la tanda que un mòdul encara ha d'entregar (buit = la tanda es pot passar a «Entregada»)
+      entregaPendentDeModul: (tandaId) => entregaPendent(estat, tandaId),
+      clauClient,
 
       marcaVista(id) {
         carrega();
@@ -914,6 +1501,13 @@
       modulsApagats: () => Object.keys(estat.config.moduls).filter((k) => estat.config.moduls[k] === false),
       setModul(id, actiu) {
         if (typeof id !== 'string' || !/^[a-z][a-z0-9-]{1,40}$/.test(id)) return err('modul_invalid', { id });
+        // Un mòdul amb coses a mig fer (paquets en camí, entregues de la ruta, kg que s'esperen) no s'apaga: si s'apagués,
+        // la tanda les donaria per fetes. Quan s'acabin, sí.
+        if (!actiu) {
+          carrega();
+          const pendents = m.pendentsDeModul(id);
+          if (pendents.length) return err('modul_amb_pendents', { id, pendents });
+        }
         return muta('modul', () => {
           if (actiu) delete estat.config.moduls[id];
           else estat.config.moduls[id] = false;

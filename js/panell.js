@@ -7,18 +7,27 @@
 
   const D = window.CassovallDades;
   const M = window.CassovallMagatzem;
-  const C = window.CasaCamp;
+  // Les dates del panell amb l'apòstrof tipogràfic («18 d’octubre»): js/comu.js és comú amb la web i el porta recte
+  const C = window.CassovallModulsComu && window.CassovallModulsComu.tipografia ? window.CassovallModulsComu.tipografia(window.CasaCamp) : window.CasaCamp;
   const R = window.CassovallModuls; // registre de mòduls (panell/moduls.js)
+  const COMU = window.CassovallModulsComu; // ajudes dels mòduls (panell/moduls-comu.js): «d’Eulàlia»
+  const BASE = window.CassovallModulsBase || {}; // el que exporta panell/moduls.js (p. ex. `quanEsTanca`)
   const PWA = window.CassovallPWA || null; // service worker, instal·lació i avisos (panell/pwa.js)
   const esc = C.esc;
+  const de = (x) => COMU.de(String(x));
+  const pl = COMU.plural; // la funció de plurals de tot el panell (moduls-comu.js) // «de 26», «d’11»: com sona la xifra
   const $ = (s, el) => (el || document).querySelector(s);
   const $$ = (s, el) => Array.from((el || document).querySelectorAll(s));
   const id = (x) => document.getElementById(x);
 
   const TEL = D.contacte.telefons[0];
   const ESTATS = R.ESTATS;
-  const PAGAMENTS = { targeta: 'Targeta', 'apple-pay': 'Apple Pay', 'google-pay': 'Google Pay' };
-  const ORIGENS = { web: 'Web', telefon: 'Telèfon', pagament: 'Pagaments', transportista: 'Transportista', escorxador: 'Escorxador', factures: 'Factures', client: 'Client', panell: 'Tu' };
+  const PAGAMENTS = { targeta: 'Targeta', 'apple-pay': 'Apple Pay', 'google-pay': 'Google Pay', pendent: 'Per decidir', efectiu: 'En efectiu', enllac: 'Enllaç de pagament' };
+  // El cobrament és de la comanda (no d'un mòdul): els quatre estats es veuen sempre; el mòdul de pagaments hi actua
+  const PAG_ESTATS = { pagat: 'Pagat', recurrent: 'Pagat', pendent: 'Per cobrar', fallit: 'Cobrament fallit', retornat: 'Retornat' };
+  const adrecaText = (k) => [k.adreca, [k.cp, k.poblacio].filter(Boolean).join(' ')].filter(Boolean).join(', ');
+  const enviamentTextComanda = (c) => (c.lliurament === 'recull' ? 'Recollida a la granja' : C.importEnviament(c));
+  const ORIGENS = { web: 'Web', telefon: 'Telèfon', pagament: 'Pagaments', transportista: 'Transportista', escorxador: 'Escorxador', factures: 'Factures', client: 'Client', gestoria: 'Gestoria', panell: 'Tu' };
   // Les vistes de sempre; les dels mòduls les dóna `R.vistes()`. `instalar` no és a la navegació: s'hi va des de Configuració.
   const VISTES = ['avui', 'tandes', 'comandes', 'transport', 'correus', 'configuracio', 'instalar'];
   const filtres = { nova: false, tanda: '', estat: '', cerca: '' };
@@ -157,22 +166,31 @@
     const h = decodeURIComponent(location.hash.replace(/^#/, ''));
     if (h.startsWith('comanda=')) return { vista: 'comandes', comanda: h.slice(8) };
     if (h.startsWith('tanda=')) return { vista: 'tandes', tanda: h.slice(6) };
+    // Les vistes dels mòduls poden portar un paràmetre: `#clients=t600000101`, `#factures=CC-1001`
+    const amb = /^([a-z][a-z0-9-]*)=(.+)$/.exec(h);
+    if (amb && R.vista(amb[1])) return { vista: amb[1], param: amb[2] };
     return { vista: VISTES.includes(h) || R.vista(h) ? h : 'avui' };
   }
 
   // Les vistes dels mòduls encesos, entre «Transport/Correus» i «Configuració»
   function pintaNavegacio() {
     const nav = $('.app-nav');
-    $$('[data-modul]', nav).forEach((a) => a.remove());
+    $$('.nav-moduls', nav).forEach((e) => e.remove());
     const configuracio = $('[data-vista="configuracio"]', nav);
-    for (const v of R.vistes()) {
+    // Les vistes dels mòduls van en una fila a part (a mòbil, una sola línia que es desplaça)
+    const vistes = R.vistes();
+    if (!vistes.length) return;
+    const fila = document.createElement('span');
+    fila.className = 'nav-moduls';
+    for (const v of vistes) {
       const a = document.createElement('a');
       a.href = '#' + v.id;
       a.dataset.vista = v.id;
       a.dataset.modul = v.modul;
       a.textContent = v.nom;
-      nav.insertBefore(a, configuracio);
+      fila.appendChild(a);
     }
+    nav.insertBefore(fila, configuracio);
   }
 
   function pinta() {
@@ -183,13 +201,15 @@
       const actual = a.dataset.vista === r.vista;
       if (actual) {
         a.setAttribute('aria-current', 'page');
-        const nav = a.parentElement;
-        nav.scrollLeft = Math.max(0, a.offsetLeft - 16);
+        const nav = a.closest('.app-nav');
+        const fila = a.parentElement;
+        if (fila !== nav) fila.scrollLeft = Math.max(0, a.offsetLeft - 16);
+        else nav.scrollLeft = Math.max(0, a.offsetLeft - 16);
       } else a.removeAttribute('aria-current');
     });
     const v = id('vista');
     const propia = { avui, tandes, comandes, transport, correus, configuracio, instalar }[r.vista];
-    const fet = r.comanda ? fitxa(r.comanda) : r.tanda ? vistaTanda(r.tanda) : propia ? propia() : vistaDeModul(r.vista);
+    const fet = r.comanda ? fitxa(r.comanda) : r.tanda ? vistaTanda(r.tanda) : propia ? propia() : vistaDeModul(r.vista, r.param);
     v.innerHTML = fet.html;
     if (fet.despres) fet.despres(v);
     if (flaixPendent) {
@@ -199,11 +219,11 @@
   }
 
   // La vista d'un mòdul: ell posa el contingut (`render(ctx)` torna { html, despres? })
-  function vistaDeModul(vistaId) {
+  function vistaDeModul(vistaId, param) {
     const x = R.vista(vistaId);
     let fet = null;
     try {
-      fet = x && x.render(R.ctx);
+      fet = x && x.render(R.ctx, param);
     } catch (e) {
       console.error('Mòdul «' + (x && x.modul) + '»: ' + e.message);
     }
@@ -314,7 +334,7 @@
         <span class="fila-nom"><strong>${esc(nomComplet(c.client))}</strong>${c.nova ? ' <span class="distintiu">Nova</span>' : ''}</span>
         <span class="fila-detall">${esc(C.producte(c.producte, c.lots))} · ${tandaDeComanda(c)} · ${esc(ESTATS[c.estat])}</span>
       </a>
-      ${boto ? `<a class="boto boto-sec" href="#comanda=${encodeURIComponent(c.id)}">Veure<span class="sr-nomes"> la comanda de ${esc(nomComplet(c.client))}</span></a>` : ''}
+      ${boto ? `<a class="boto boto-sec" href="#comanda=${encodeURIComponent(c.id)}">Veure<span class="sr-nomes"> la comanda ${esc(COMU.de(nomComplet(c.client)))}</span></a>` : ''}
     </li>`;
   }
 
@@ -322,9 +342,11 @@
     const boto = typeof t.boto.hash === 'string'
       ? `<a class="boto" href="${esc(t.boto.hash)}">${esc(t.boto.text)}</a>`
       : `<button type="button" class="boto" data-tasca="${esc(t.id)}">${esc(t.boto.text)}</button>`;
+    // Si la tasca és trucar algú, el telèfon hi és a l'abast (enllaç tel:), al costat del botó que la resol
+    const tel = t.tel && /^tel:\+?\d+$/.test(t.tel.href) ? `<a class="boto boto-lleu" href="${esc(t.tel.href)}">${esc(t.tel.text || 'Truca')}</a>` : '';
     return `<li class="tasca tasca-${esc(t.prioritat)}" data-tasca-id="${esc(t.id)}" data-modul="${esc(t.modul)}">
       <span class="fila-text"><span class="fila-nom"><strong>${esc(t.titol)}</strong></span>${t.detall ? `<span class="fila-detall">${esc(t.detall)}</span>` : ''}</span>
-      ${boto}
+      ${tel ? `<span class="accions">${tel}${boto}</span>` : boto}
     </li>`;
   }
 
@@ -340,14 +362,19 @@
     let tanda = '<p>Encara no hi ha cap tanda oberta.</p>';
     if (t) {
       const o = t.ocupacio;
+      // Que la tanda es tanca aviat no és feina (esperar no ho és): es diu aquí, no a «Per fer»
+      const quan = BASE.quanEsTanca ? BASE.quanEsTanca(t, avuiISO()) : null;
       tanda = `<a class="targeta targeta-enllac" href="${enllacTanda(t)}">
         <h3>Tanda ${t.numero} · data límit ${dataCurta(t.dataLimit)}</h3>
-        ${barraHTML(o.percent, `Lots reservats a la tanda ${t.numero}: ${o.lots} de ${o.places}`)}
-        <p class="comptador">${o.lots} de ${o.places} lots · en falten ${o.lliures}</p>
+        ${barraHTML(o.percent, `Lots reservats a la tanda ${t.numero}: ${o.lots} ${de(o.places)}`)}
+        <p class="comptador">${o.lots} ${de(o.places)} lots · ${pl(o.lliures, 'en falta #', 'en falten #')}</p>
+        ${quan ? `<p class="fila-detall">Es tanca ${esc(quan)}.</p>` : ''}
       </a>`;
     }
     // La llista de feina es calcula cada vegada (R.tasques): surt de les tandes, de les comandes i dels esdeveniments
     const tasques = R.tasques();
+    // El que espera algú altre (la carn, la tanda en camí, el comprador que la ve a buscar): a part, amb el botó per quan passi
+    const esperes = R.esperes ? R.esperes() : [];
     const passat = M.esdeveniments({ limit: 80 }).filter(R.esdevenimentVisible).slice(0, 8);
     const nous = passat.filter((ev) => !ev.vist).length;
     const html = `<h2>Avui</h2>${caixaFlaix}
@@ -356,6 +383,11 @@
         <h3>Per fer (${tasques.length})</h3>
         ${tasques.length ? `<ul class="fileres tasques">${tasques.map(filaTasca).join('')}</ul>` : '<p class="buit">Avui no tens res per fer.</p>'}
       </section>
+      ${esperes.length ? `<section id="en-espera">
+        <h3>En espera (${esperes.length})</h3>
+        <p class="fila-detall">No depèn de tu: quan passi, toca el botó.</p>
+        <ul class="fileres tasques">${esperes.map(filaTasca).join('')}</ul>
+      </section>` : ''}
       <section id="ha-passat">
         <h3>Ha passat</h3>
         ${passat.length ? `<ul class="passats">${passat.map(filaPassat).join('')}</ul>` : '<p class="buit">Encara no ha passat res.</p>'}
@@ -365,7 +397,7 @@
     return { html, despres: (v) => {
       fixaBarres(v);
       $$('[data-tasca]', v).forEach((b) => b.addEventListener('click', () => {
-        const feta = tasques.find((x) => x.id === b.dataset.tasca);
+        const feta = tasques.concat(esperes).find((x) => x.id === b.dataset.tasca);
         if (feta) R.executa(feta, ui);
       }));
       const vist = id('passat-vist');
@@ -387,8 +419,15 @@
 
   function obreSimulador() {
     const sims = R.simulacions();
+    // Agrupats per mòdul: són una quinzena de botons i així se saben trobar
+    const grups = [];
+    for (const s of sims) {
+      let g = grups.find((x) => x.modul === s.modul);
+      if (!g) grups.push((g = { modul: s.modul, sims: [] }));
+      g.sims.push(s);
+    }
     const cos = `<p class="fila-detall">Només per ensenyar el panell: fa el mateix que faria el negoci de veritat.</p>
-      <ul class="simulacions">${sims.map((s) => `<li><button type="button" class="boto boto-lleu" data-sim="${esc(s.id)}">${esc(s.text)}</button></li>`).join('')}</ul>`;
+      ${grups.map((g) => `<h3 class="sim-grup">${esc(R.modul(g.modul).nom)}</h3><ul class="simulacions">${g.sims.map((s) => `<li><button type="button" class="boto boto-lleu" data-sim="${esc(s.id)}">${esc(s.text)}</button></li>`).join('')}</ul>`).join('')}`;
     const d = dialeg('Simulador', cos, [{ text: 'Tanca', primari: true }]);
     $$('[data-sim]', d).forEach((b) =>
       b.addEventListener('click', () => {
@@ -463,7 +502,7 @@
 
   const PAS_TEXT = {
     completa: (num, n) => `Vols tancar la tanda ${num}? S’enviarà un correu a ${n} ${n === 1 ? 'comprador' : 'compradors'} per dir-los que és tancada.`,
-    preparacio: (num, n) => `Vols passar la tanda ${num} a "En preparació"? S’enviarà un correu a ${n} ${n === 1 ? 'comprador' : 'compradors'}.`,
+    preparacio: (num, n) => `Vols passar la tanda ${num} a «En preparació»? S’enviarà un correu a ${n} ${n === 1 ? 'comprador' : 'compradors'}.`,
     enviada: (num, n) => `Vols marcar la tanda ${num} com a enviada? S’enviarà un correu a ${n} ${n === 1 ? 'comprador' : 'compradors'} per dir-los que és en camí.`,
     entregada: (num, n) => `Vols marcar la tanda ${num} com a entregada? S’enviarà un correu a ${n} ${n === 1 ? 'comprador' : 'compradors'}.`,
   };
@@ -477,8 +516,8 @@
       const o = t.ocupacio;
       return `<a class="targeta tanda targeta-enllac" href="${enllacTanda(t)}">
         <h3>Tanda ${t.numero} · ${esc(estatTanda(t))}</h3>
-        <p class="comptador">${o.lots} de ${o.places} lots reservats · ${n} ${n === 1 ? 'comprador' : 'compradors'} · data límit ${dataCurta(t.dataLimit)}</p>
-        ${barraHTML(o.percent, `Lots reservats a la tanda ${t.numero}: ${o.lots} de ${o.places}`)}
+        <p class="comptador">${o.lots} ${de(o.places)} lots reservats · ${n} ${n === 1 ? 'comprador' : 'compradors'} · data límit ${dataCurta(t.dataLimit)}</p>
+        ${barraHTML(o.percent, `Lots reservats a la tanda ${t.numero}: ${o.lots} ${de(o.places)}`)}
       </a>`;
     });
     const html = `<h2>Tandes</h2>${caixaFlaix}<button type="button" class="boto" data-accio="nova">Obre una tanda nova</button><div class="llista-tandes">${cartes.join('')}</div>`;
@@ -487,6 +526,12 @@
 
   /* ---------- Vista d'una tanda (#tanda=<id>) ---------- */
 
+  const FALTA = {
+    'carn-demanada': { text: 'Abans de preparar-la, demana la carn a l’escorxador.', boto: 'Mira què cal demanar', modul: 'escorxador', accio: 'demana' },
+    'kg-reals': { text: 'Abans de preparar-la, apunta els kg reals de cada lot.', boto: 'Apunta els kg', modul: 'escorxador', accio: 'kg' },
+    etiquetes: { text: 'Abans d’enviar-la, fes les etiquetes dels paquets.', boto: 'Fes les etiquetes', modul: 'enviaments', accio: 'etiquetes' },
+  };
+
   function vistaTanda(tandaId) {
     const t = M.tanda(tandaId);
     const enrere = '<a class="enrere" href="#tandes">Tandes</a>';
@@ -494,14 +539,20 @@
     const cs = M.comandesDeTanda(t.id);
     const n = cs.length;
     const o = t.ocupacio;
-    const seg = M.estatsPossibles(t.id)[0];
+    // El botó d'estat surt del recorregut (M.estatsPossibles: només el pas que toca, si es pot fer). Si el pas que toca és
+    // d'un mòdul (demanar la carn, apuntar els kg, fer les etiquetes), una línia diu què falta i un botó ho fa.
+    // Amb paquets o ruta, «Entregada» no es posa a mà: la tanda hi passa sola quan totes les comandes són entregades.
+    const pendentsEntrega = M.entregaPendentDeModul(t.id);
+    const pas = M.pasTanda(t.id);
+    const seg = M.estatsPossibles(t.id)[0] || '';
+    const falta = pas && FALTA[pas.id] && R.accio(FALTA[pas.id].modul, FALTA[pas.id].accio) ? FALTA[pas.id] : null;
     const modificable = t.estat !== 'entregada';
     const places = t.estat === 'oberta' || t.estat === 'completa';
-    const kg = C.kg(o.lots * D.pesLot().kgReals);
+    const kg = C.kg(M.lotsQueSurten(t.id) * D.pesLot().kgReals); // el pes del que surt (sense retingudes ni retornades)
     const dl = [
       ['Data límit', dataCurta(t.dataLimit)],
       // La barra va amb la xifra que mesura: sota la línia d'estats es llegia com el progrés de l'entrega (jutge, 02/11)
-      ['Lots reservats', `${o.lots} de ${o.places}${barraHTML(o.percent, `Lots reservats a la tanda ${t.numero}: ${o.lots} de ${o.places}`)}`],
+      ['Lots reservats', `${o.lots} ${de(o.places)}${barraHTML(o.percent, `Lots reservats a la tanda ${t.numero}: ${o.lots} ${de(o.places)}`)}`],
       ['Pes', `${kg} kg`],
       ['Compradors', String(n)],
       ['Import dels lots', esc(D.preuProducte('lot', o.lots).etiqueta)],
@@ -513,8 +564,11 @@
       <section class="targeta tanda no-imprimeix" aria-label="Resum de la tanda ${t.numero}">
         ${passosHTML(t)}
         <dl class="dades dades-resum">${dl}</dl>
+        ${pas && pas.id === 'entregada' && pendentsEntrega.length ? `<p class="fila-detall">Passarà sola a «Entregada» quan ${pendentsEntrega.length === 1 ? 'arribi l’última comanda' : 'arribin les ' + pendentsEntrega.length + ' comandes que falten'}.</p>` : ''}
+        ${falta ? `<p class="fila-detall">${esc(falta.text)}</p>` : ''}
         <div class="accions">
           ${seg ? `<button type="button" class="boto" data-accio="estat" data-seg="${seg}">Passa a «${ESTATS[seg]}»</button>` : ''}
+          ${falta ? `<button type="button" class="boto" data-accio="falta">${esc(falta.boto)}</button>` : ''}
           ${modificable ? '<button type="button" class="boto boto-lleu" data-accio="data">Canvia la data límit</button>' : ''}
           ${places ? '<button type="button" class="boto boto-lleu" data-accio="places">Canvia els lots</button>' : ''}
         </div>
@@ -522,6 +576,7 @@
       <section class="no-imprimeix"><h3>Comandes de la tanda (${n})</h3>
         ${n ? `<ul class="fileres">${cs.map((c) => filaComanda(c, true)).join('')}</ul>` : '<p class="buit">Aquesta tanda encara no té comandes.</p>'}
       </section>
+      ${desviades(cs)}
       <section><h3>Transport</h3>
         <div class="accions"><button type="button" class="boto boto-lleu" id="imprimeix">Imprimeix</button><button type="button" class="boto boto-lleu" id="csv">Baixa-la en Excel (CSV)</button></div>
         ${blocTransport(t.id)}
@@ -535,6 +590,7 @@
         if (b) b.addEventListener('click', () => fn(b));
       };
       on('estat', (b) => canviaEstat(t, b.dataset.seg));
+      on('falta', () => R.accio(falta.modul, falta.accio)(R.ctx, { tandaId: t.id }, ui));
       on('data', () => canviaData(t));
       on('places', () => canviaPlaces(t));
       id('imprimeix').addEventListener('click', () => window.print());
@@ -542,14 +598,33 @@
     } };
   }
 
+  // Les comandes que no cabien a la primera tanda oberta i han anat a aquesta (la comanda va sencera a la següent)
+  function desviades(cs) {
+    const llista = cs.filter((c) => c.desviada);
+    if (!llista.length) return '';
+    const motiu = (d) => (d.lliures === 0 ? `La tanda ${d.numero} era plena.` : `A la tanda ${d.numero} només ${d.lliures === 1 ? 'hi quedava 1 lot' : 'hi quedaven ' + d.lliures + ' lots'}.`);
+    const fila = (c) => `<li class="fila">
+      <a class="fila-text" href="#comanda=${encodeURIComponent(c.id)}">
+        <span class="fila-nom"><strong>${esc(nomComplet(c.client))}</strong></span>
+        <span class="fila-detall">${esc(C.producte(c.producte, c.lots))} · ${esc(motiu(c.desviada))}</span>
+      </a>
+    </li>`;
+    return `<section class="no-imprimeix" id="desviades"><h3>Hi han anat perquè l’anterior no tenia lloc (${llista.length})</h3><ul class="fileres">${llista.map(fila).join('')}</ul></section>`;
+  }
+
   function canviaEstat(t, seg) {
-    const n = M.comandesDeTanda(t.id).length;
-    const text = n ? PAS_TEXT[seg](t.numero, n) : PAS_TEXT[seg](t.numero, 0).replace(/ S’enviarà un correu.*$/, '') + ' Aquesta tanda no té cap comprador. No s’enviarà cap correu.';
+    // Els correus que s'enviaran de veritat: els compta la mateixa funció que els envia (M.correusDeCanvi)
+    const n = M.correusDeCanvi(t.id, seg);
+    const text = n ? PAS_TEXT[seg](t.numero, n) : PAS_TEXT[seg](t.numero, 0).replace(/ S’enviarà un correu.*$/, '') + (M.comandesDeTanda(t.id).length ? ' No s’enviarà cap correu.' : ' Aquesta tanda no té cap comprador. No s’enviarà cap correu.');
     dialeg('Canvia l’estat', `<p>${esc(text)}</p>`, [
       { text: PAS_SI[seg], primari: true, accio: () => {
+        const abans = M.correus().length;
         const r = M.canviaEstatTanda(t.id, seg);
         pinta();
-        if (r.ok) flaix(`Fet. S’han enviat ${r.correus.length} correus. Els pots veure a "Correus".`);
+        // Els que s'han enviat de veritat (els de la tanda i els de l'opinió)
+        const enviats = M.correus().length - abans;
+        if (r.ok) flaix(enviats > 1 ? `Fet. S’han enviat ${enviats} correus. Els pots veure a «Correus».` : enviats === 1 ? 'Fet. S’ha enviat un correu. El pots veure a «Correus».' : 'Fet.');
+        else flaix(r.error === 'entrega_pendent' ? 'Encara no es pot: falten comandes per entregar.' : FALTA[r.pas] ? 'Encara no es pot. ' + FALTA[r.pas].text : 'Encara no es pot: la tanda ha canviat. Torna-ho a mirar.');
       } },
       cancela,
     ]);
@@ -590,7 +665,7 @@
       } },
       cancela,
     ]);
-    const text = () => ($('#nova-text', d).textContent = `Vols obrir la tanda ${num} de ${places} lots, amb data límit el ${dataCurta($('#nova-data', d).value || prop)}?`);
+    const text = () => ($('#nova-text', d).textContent = `Vols obrir la tanda ${num} ${de(places)} lots, amb data límit el ${dataCurta($('#nova-data', d).value || prop)}?`);
     $('#nova-data', d).addEventListener('input', text);
     text();
   }
@@ -623,7 +698,7 @@
         }
         const r = M.canviaTanda(t.id, { places: n });
         if (!r.ok) {
-          e.textContent = `Ja hi ha ${t.ocupacio.lots} lots reservats a aquesta tanda: no n’hi pots posar menys.`;
+          e.textContent = `${pl(t.ocupacio.lots, 'Ja hi ha # lot reservat', 'Ja hi ha # lots reservats')} a aquesta tanda: no n’hi pots posar menys.`;
           e.hidden = false;
           return false;
         }
@@ -687,6 +762,8 @@
       const t = M.tanda(h.tandaId);
       return `${quan} · La tanda ${t ? t.numero : ''} passa a «${ESTATS[h.estat] || h.estat}»`;
     }
+    if (h.tipus === 'entregada') return `${quan} · Entregada`;
+    if (h.tipus === 'pagament') return `${quan} · Pagament: ${(PAG_ESTATS[h.estat] || h.estat).toLowerCase()}`;
     if (h.tipus === 'moguda') {
       const de = M.tanda(h.de);
       const a = M.tanda(h.a);
@@ -702,17 +779,19 @@
     const k = c.client;
     const tel = k.telefon.replace(/[^\d+]/g, '');
     const wa = 'https://wa.me/' + (tel.startsWith('+') ? tel.slice(1) : '34' + tel);
-    const env = C.importEnviament(c);
+    const env = enviamentTextComanda(c);
     const rebuts = M.correus({ comandaId: c.id, destinatari: 'comprador' }).filter(R.correuVisible);
     const dl = (parelles) => `<dl class="dades">${parelles.filter((p) => p[1] !== '').map(([a, b]) => `<div><dt>${a}</dt><dd>${b}</dd></div>`).join('')}</dl>`;
-    const lliurament = { 'repartiment-propi': 'El repartim nosaltres', transportista: 'Transportista' }[c.lliurament] || 'Per acordar';
-    const mou = c.tandaId && c.estat !== 'enviada' && c.estat !== 'entregada';
+    const lliurament = { 'repartiment-propi': 'El repartim nosaltres', transportista: 'Transportista', recull: 'La recull a la granja' }[c.lliurament] || 'Per acordar';
+    const mou = c.tandaId && M.potMoure(c.id).ok;
+    // Sense el mòdul de pagaments ningú no la cobraria: la fitxa en dona la sortida
+    const senseModulPag = !R.actiu('pagaments') && (c.pagament === 'pendent' || c.pagament === 'fallit');
     const html = `${enrere}
       <h2>${esc(nomComplet(k))}${c.nova ? ' <span class="distintiu">Nova</span>' : ''}</h2>
       ${caixaFlaix}
       <div class="accions">
         <a class="boto" href="tel:${esc(tel)}">Truca</a>
-        <a class="boto boto-lleu" href="mailto:${esc(k.email)}">Correu</a>
+        ${k.email ? `<a class="boto boto-lleu" href="mailto:${esc(k.email)}">Correu</a>` : ''}
         <a class="boto boto-lleu" href="${esc(wa)}" target="_blank" rel="noopener">WhatsApp</a>
         ${mou ? '<button type="button" class="boto boto-lleu" id="mou">Mou a una altra tanda</button>' : ''}
       </div>
@@ -720,19 +799,20 @@
         ['Nom', esc(nomComplet(k))],
         ['Telèfon', esc(k.telefon)],
         ['Correu', esc(k.email)],
-        ['Adreça', `${esc(k.adreca)}, ${esc(k.cp)} ${esc(k.poblacio)}`],
+        ['Adreça', c.lliurament === 'recull' ? '' : esc(adrecaText(k))],
         ['Notes per a l’entrega', esc(k.notes)],
         ['Lliurament', lliurament],
       ])}</section>
       <section class="targeta"><h3>Comanda</h3>${dl([
         ['Comanda', esc(c.id)],
-        ['Feta', C.dataHora(c.creada)],
+        ['Feta', C.dataHora(c.creada) + (c.origen === 'telefon' ? ' · per telèfon' : '')],
         ['Producte', esc(C.producte(c.producte, c.lots))],
         ['Tanda', c.tandaNumero ? `<a href="#tanda=${encodeURIComponent(c.tandaId)}">Tanda ${c.tandaNumero}</a> · ${esc(ESTATS[c.estat])}` : 'A part, sense tanda'],
         ['Import', esc(C.importLots(c.producte, c.lots))],
         ['Enviament', env ? esc(env) : 'Per acordar'],
         ['Total', esc(C.importTotal(c))],
-        ['Pagament', `${esc(PAGAMENTS[c.metodePagament] || c.metodePagament)} · pagat`],
+        ['Pagament', `${esc(PAGAMENTS[c.metodePagament] || c.metodePagament)} · ${esc((PAG_ESTATS[c.pagament] || c.pagament).toLowerCase())}${senseModulPag ? ' <button type="button" class="boto boto-lleu" id="ja-pagat">Ja ha pagat</button>' : ''}`],
+        ['Entregada', c.entregada ? esc(C.dataHora(c.entregada)) : ''],
       ])}</section>
       <section class="targeta"><h3>Historial</h3><ul class="historial">${c.historial.map((h) => `<li>${esc(historialText(h))}</li>`).join('')}</ul></section>
       <section class="targeta"><h3>Correus rebuts</h3>${rebuts.length ? `<ul class="fileres">${rebuts.map((m) => filaCorreu(m, false)).join('')}</ul>` : '<p class="buit">Encara no ha rebut cap correu.</p>'}</section>
@@ -742,6 +822,12 @@
       seccionsDespres(v, 'comanda', c);
       const b = id('mou');
       if (b) b.addEventListener('click', () => mouComanda(c));
+      const jp = id('ja-pagat');
+      if (jp) jp.addEventListener('click', () => {
+        const r = M.setPagament(c.id, 'pagat');
+        pinta();
+        flaix(r.ok ? 'Fet. La comanda és cobrada.' : 'No s’ha pogut marcar com a cobrada.');
+      });
       if (c.nova) M.marcaVista(c.id);
     } };
   }
@@ -759,7 +845,7 @@
       dialeg('Mou a una altra tanda', `<p>A la tanda ${t.numero} només hi caben ${t.ocupacio.lliures} ${t.ocupacio.lliures === 1 ? 'lot més' : 'lots més'} i aquesta comanda en té ${c.places}.</p>`, [{ text: 'Tanca', primari: true }]);
       return;
     }
-    dialeg('Mou a una altra tanda', `<fieldset class="opcions"><legend>A quina tanda la vols moure?</legend>${caben.map((t, i) => `<label><input type="radio" name="desti" value="${esc(t.id)}"${i === 0 ? ' checked' : ''}> Tanda ${t.numero} · data límit ${dataCurta(t.dataLimit)} · hi queden ${t.ocupacio.lliures} lots</label>`).join('')}</fieldset><p class="error-pla" id="m-err" role="alert" hidden></p>`, [
+    dialeg('Mou a una altra tanda', `<fieldset class="opcions"><legend>A quina tanda la vols moure?</legend>${caben.map((t, i) => `<label><input type="radio" name="desti" value="${esc(t.id)}"${i === 0 ? ' checked' : ''}> Tanda ${t.numero} · data límit ${dataCurta(t.dataLimit)} · ${esc(C.queden(t.ocupacio.lliures))}</label>`).join('')}</fieldset><p class="error-pla" id="m-err" role="alert" hidden></p>`, [
       { text: 'Mou-la', primari: true, accio: (dlg) => {
         const val = $('input[name="desti"]:checked', dlg).value;
         const r = M.movaComanda(c.id, val);
@@ -792,7 +878,7 @@
     const n = llista.comandes.length;
     return `<section class="targeta llista-transport"><h3>${titol}</h3>${n
       ? `<table class="taula"><thead><tr><th scope="col">Nom</th><th scope="col">Adreça</th><th scope="col">CP</th><th scope="col">Població</th><th scope="col">Telèfon</th><th scope="col">Lots</th><th scope="col">Notes</th></tr></thead><tbody>${files}</tbody></table>
-         <p class="total-llista">Total: ${llista.lots} lots (${kg} kg) · ${n} ${n === 1 ? 'entrega' : 'entregues'}</p>`
+         <p class="total-llista">Total: ${C.lots(llista.lots)} (${kg} kg) · ${pl(n, 'entrega', 'entregues')}</p>`
       : '<p class="buit">Cap entrega d’aquest tipus.</p>'}</section>`;
   }
 
@@ -800,7 +886,11 @@
   function blocTransport(tandaId) {
     if (!tandaId || !M.comandesDeTanda(tandaId).length) return '<p class="buit">Aquesta tanda encara no té comandes.</p>';
     const ll = M.llistesEntrega(tandaId);
-    return taulaTransport('Les repartim nosaltres', ll.repartimentPropi) + taulaTransport('Transportista', ll.transportista);
+    // Les llistes només porten les que surten (el filtre únic); les retingudes i les retornades, a part i amb el motiu
+    const fora = ll.noSurten.length
+      ? `<section class="targeta no-imprimeix" id="no-surten"><h3>No surten amb la tanda (${ll.noSurten.length})</h3><ul class="fileres">${ll.noSurten.map((c) => `<li class="fila"><a class="fila-text" href="#comanda=${encodeURIComponent(c.id)}"><span class="fila-nom"><strong>${esc(nomComplet(c.client))}</strong> · ${esc(C.producte(c.producte, c.lots))}</span><span class="fila-detall">${esc(c.motiuNoSurt)}</span></a></li>`).join('')}</ul></section>`
+      : '';
+    return taulaTransport('Les repartim nosaltres', ll.repartimentPropi) + taulaTransport('Transportista', ll.transportista) + (ll.recull.comandes.length ? taulaTransport('La recullen a la granja', ll.recull) : '') + fora;
   }
 
   function transport() {
@@ -830,7 +920,7 @@
     const t = M.tanda(tandaId);
     const cap = ['Entrega', 'Nom', 'Adreça', 'CP', 'Població', 'Telèfon', 'Lots', 'Notes'];
     const files = [];
-    [['Les repartim nosaltres', ll.repartimentPropi], ['Transportista', ll.transportista]].forEach(([nom, llista]) => {
+    [['Les repartim nosaltres', ll.repartimentPropi], ['Transportista', ll.transportista], ['La recullen a la granja', ll.recull]].forEach(([nom, llista]) => {
       llista.comandes.forEach((c) => files.push([nom, nomComplet(c.client), c.client.adreca, c.client.cp, c.client.poblacio, c.client.telefon, c.places, c.client.notes]));
     });
     const text = '﻿' + [cap].concat(files).map((f) => f.map(csvCel).join(';')).join('\r\n') + '\r\n';
@@ -846,7 +936,7 @@
 
   /* ---------- Correus ---------- */
 
-  const MOTIUS = { 'comanda-nova': 'Comanda nova', 'canvi-estat-tanda': 'Canvi d’estat de la tanda' };
+  const MOTIUS = { 'comanda-nova': 'Comanda nova', 'canvi-estat-tanda': 'Canvi d’estat de la tanda', entrega: 'Comanda entregada', devolucio: 'Devolució', 'enllac-pagament': 'Enllaç de pagament', 'avis-tanda': 'Tanda nova', moguda: 'Comanda moguda de tanda' };
   const SIGNATURA = `Casa Camp\n${TEL}`;
 
   // El text el posa PLA-COPY.md §4; el registre només desa plantilla + dades
@@ -888,7 +978,7 @@
             ...(aPart ? [] : [`Enviament: ${env} (${tipus})`]),
             `Total pagat: ${total}`,
             '',
-            aPart ? 'Va a part, sense tanda. Truca’l per quedar el dia.' : `Tanda ${t.numero}: ara té ${t.ocupats} de ${t.places} lots. Data límit: ${dataLimit}.`,
+            aPart ? 'Va a part, sense tanda. Truca-li per quedar el dia.' : `Tanda ${t.numero}: ara té ${t.ocupats} ${de(t.places)} lots. Data límit: ${dataLimit}.`,
             '',
             `Obre la comanda al panell: ${d.enllacPanell || ''}`,
           ].join('\n'),
@@ -919,6 +1009,13 @@
         return propi
           ? { assumpte: 'Et portem la comanda', cos: [`Hola, ${k.nom}:`, '', `La teva comanda ja és en camí. Te la portem nosaltres mateixos, refrigerada, a ${adreca}.`, '', `Si no hi has de ser, truca’ns al ${TEL} i quedem d’una altra manera.`, '', 'Recorda posar la carn a la nevera en arribar.', '', SIGNATURA].join('\n') }
           : { assumpte: 'La teva comanda és en camí', cos: [`Hola, ${k.nom}:`, '', `La teva comanda ha sortit amb el transportista. T’arriba refrigerada a ${adreca}.`, '', `Si no hi has de ser, truca’ns al ${TEL} com més aviat millor i ho mirem.`, '', 'Recorda posar la carn a la nevera en arribar.', '', SIGNATURA].join('\n') };
+      }
+      case 'comanda-moguda': {
+        const x = d.extra || {};
+        const abans = x.de ? `no ha sortit amb la tanda ${x.de}` : 'no ha sortit amb la seva tanda';
+        return x.pagada
+          ? { assumpte: `La teva comanda va a la tanda ${t.numero}`, cos: [`Hola, ${k.nom}:`, '', `Ja tenim el pagament de la comanda ${c.id}. Com que ${abans}, va a la tanda ${t.numero}, que ${lotLiniaTanda}.`, '', 'T’escriurem quan surti cap a casa teva.', '', SIGNATURA].join('\n') }
+          : { assumpte: `La teva comanda va a la tanda ${t.numero}`, cos: [`Hola, ${k.nom}:`, '', `La comanda ${c.id} ${abans}: encara no ens consta el pagament. L’hem passat a la tanda ${t.numero}, que ${lotLiniaTanda}.`, '', `Quan la paguis, sortirà amb aquesta tanda. Si tens cap dubte, truca’ns al ${TEL}.`, '', SIGNATURA].join('\n') };
       }
       case 'tanda-entregada':
         return { assumpte: 'Ja tens la comanda a casa', cos: [`Hola, ${k.nom}:`, '', 'La teva comanda ja s’ha entregat. Si hi ha res que no estigui bé, truca’ns.', '', 'Gràcies per comprar-nos directament.', '', SIGNATURA].join('\n') };
@@ -966,6 +1063,24 @@
 
   /* ---------- Configuració ---------- */
 
+  const PENDENTS_TEXT = {
+    // Diu el que passa de veritat: els paquets amb l'etiqueta feta encara són a la granja; els altres, amb el transportista
+    enviaments: (n, ids) => {
+      const granja = ids.filter((x) => (M.lliurament(x) || {}).estat === 'preparat').length;
+      const cami = n - granja;
+      const parts = [granja ? pl(granja, '# paquet amb l’etiqueta feta, que encara és a la granja', '# paquets amb l’etiqueta feta, que encara són a la granja') : '', cami ? pl(cami, '# paquet amb el transportista, que encara no ha arribat', '# paquets amb el transportista, que encara no han arribat') : ''].filter(Boolean);
+      return `Hi ha ${parts.join(' i ')}. Si l’apagues ara, es perdria el seguiment i es donarien per entregats sense saber-ho. Quan hagin arribat, el podràs apagar.`;
+    },
+    pagaments: (n) => `Hi ha ${pl(n, '# comanda per cobrar', '# comandes per cobrar')} (enllaç sense pagar, cobrament fallit o efectiu). Si l’apagues ara, ningú no les cobraria. Cobra-les, o retorna-les, i el podràs apagar.`,
+    ruta: (n) => `Hi ha ${n === 1 ? '1 entrega pròpia' : n + ' entregues pròpies'} d’una tanda que ja ha sortit. Si l’apagues ara, es donarien per entregades sense saber-ho. Quan les hagis portat, el podràs apagar.`,
+    escorxador: (n) => `${n === 1 ? 'Una tanda espera' : n + ' tandes esperen'} els kg reals de la carn que ja has demanat. Apunta’ls i el podràs apagar.`,
+  };
+  function noEsPotApagar(idModul, pendents) {
+    const n = (pendents || []).length;
+    const cos = PENDENTS_TEXT[idModul] ? PENDENTS_TEXT[idModul](n, pendents || []) : 'Té feina a mig fer. Acaba-la i el podràs apagar.';
+    dialeg(`Encara no es pot apagar «${R.modul(idModul).nom}»`, `<p>${esc(cos)}</p>`, [{ text: 'Tanca', primari: true }]);
+  }
+
   function configuracio() {
     const html = `<h2>Configuració</h2>${caixaFlaix}
       <section class="targeta">
@@ -992,8 +1107,9 @@
         b.addEventListener('click', () => {
           const idModul = b.dataset.modulInterruptor;
           const volEncendre = !R.actiu(idModul);
-          M.setModul(idModul, volEncendre); // el subscriptor repinta
-          flaix(`${R.modul(idModul).nom}: ${volEncendre ? 'encès' : 'apagat'}.`);
+          const r = M.setModul(idModul, volEncendre); // el subscriptor repinta
+          if (r.ok) flaix(`${R.modul(idModul).nom}: ${volEncendre ? 'encès' : 'apagat'}.`);
+          else if (r.error === 'modul_amb_pendents') noEsPotApagar(idModul, r.pendents);
         }),
       );
       id('f-config').addEventListener('submit', (e) => {
@@ -1029,8 +1145,39 @@
     } };
   }
 
+  // Imprimeix només una secció d'un mòdul (etiquetes, ruta…): la resta s'amaga mentre dura la impressió (css/panell.css)
+  function imprimeix(seccio) {
+    const el = $(`.seccio-modul[data-seccio="${seccio}"]`, id('vista'));
+    if (!el) return window.print();
+    el.classList.add('imprimint');
+    document.body.dataset.imprimeix = seccio;
+    const acaba = () => {
+      el.classList.remove('imprimint');
+      delete document.body.dataset.imprimeix;
+      window.removeEventListener('afterprint', acaba);
+    };
+    window.addEventListener('afterprint', acaba);
+    window.print();
+    // Si el navegador no avisa en acabar (o la impressió és simulada), no deixem la pantalla amagada
+    setTimeout(acaba, 1500);
+  }
+
+  // Baixa un text com a fitxer (l'Excel de la gestoria)
+  function descarrega(nom, text, tipus) {
+    const url = URL.createObjectURL(new Blob([text], { type: tipus || 'text/csv;charset=utf-8' }));
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = nom;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    setTimeout(() => URL.revokeObjectURL(url), 1000);
+  }
+
   // El que reben les funcions dels mòduls (tasques, accions, seccions) per tocar la interfície del panell
   const ui = {
+    imprimeix,
+    descarrega,
     canviaEstat,
     navega: (hash) => {
       if (location.hash === hash) pinta();

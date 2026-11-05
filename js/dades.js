@@ -88,9 +88,17 @@
       diesEntrega: { dies: 10, mostra: true, etiquetaMostra: '00' },
 
       // Formes de pagament (simulades): només aquestes tres, sense Bizum.
+      // `metodesTelefon`: com paga qui fa la comanda per telèfon (la comanda queda «pendent» fins que es cobra).
+      // `comissioMostra`: el que es queda la passarel·la per comanda; xifra de mostra fins que hi hagi tarifa real.
       pagament: {
         metodes: ['targeta', 'apple-pay', 'google-pay'],
+        metodesTelefon: ['pendent', 'efectiu', 'enllac'],
+        comissioMostra: '00 €',
       },
+
+      // Escorxador (mòdul «escorxador»): quants kg de carn en lot surten d'una vedella. XIFRA DE MOSTRA: el pastor ha
+      // de dir-la (PLA-eines/panell-connectat/ARQUITECTURA.md, preguntes per al pastor).
+      escorxador: { kgPerVedella: 130, mostra: true },
 
       // Canals d'avís al pastor quan entra una comanda. El correu funciona (simulat). WhatsApp: PREPARAT però
       // desactivat i sense implementar (en Lluc, 01/11/2026: no es descarta per a la versió real).
@@ -103,7 +111,7 @@
       // a la versió real, cada origen és un webhook que escriu el mateix registre. `panell` és el que fa el pastor
       // des del panell (canviar l'estat d'una tanda). `max`: els més antics s'esborren per no omplir el navegador.
       esdeveniments: {
-        origens: ['web', 'telefon', 'pagament', 'transportista', 'escorxador', 'factures', 'client', 'panell'],
+        origens: ['web', 'telefon', 'pagament', 'transportista', 'escorxador', 'factures', 'client', 'gestoria', 'panell'],
         max: 500,
       },
 
@@ -130,6 +138,7 @@
           'tanda-preparacio',
           'tanda-enviada',
           'tanda-entregada',
+          'comanda-moguda', // no ha sortit amb la seva tanda (sense pagar) i va a la següent
         ],
       },
 
@@ -152,7 +161,7 @@
           { tanda: 12, fa: 52, lots: 5, nom: 'Jaume', cognoms: 'Demo', email: 'jaume@exemple.invalid', telefon: '000 000 016', adreca: 'Carrer Demo, 16', cp: '25560', poblacio: 'Sort', notes: '' },
           { tanda: 13, fa: 33, lots: 6, nom: 'Núria', cognoms: 'Exemple', email: 'nuria@exemple.invalid', telefon: '000 000 001', adreca: 'Carrer d’Exemple, 1, 2n 1a', cp: '08001', poblacio: 'Barcelona', notes: '' },
           { tanda: 13, fa: 30, lots: 5, nom: 'Jordi', cognoms: 'Mostra', email: 'jordi@exemple.invalid', telefon: '000 000 002', adreca: 'Carrer de Mostra, 2', cp: '17001', poblacio: 'Girona', notes: '' },
-          { tanda: 13, fa: 27, lots: 4, nom: 'Laia', cognoms: 'Prova', email: 'laia@exemple.invalid', telefon: '000 000 003', adreca: 'Plaça de Prova, 3', cp: '25001', poblacio: 'Lleida', notes: '' },
+          { tanda: 13, fa: 27, lots: 4, nom: 'Pau', cognoms: 'Prova', email: 'pau@exemple.invalid', telefon: '000 000 014', adreca: 'Plaça Inventada, 14', cp: '08720', poblacio: 'Vilafranca del Penedès', notes: '' },
           { tanda: 13, fa: 24, lots: 7, nom: 'Marc', cognoms: 'Fictici', email: 'marc@exemple.invalid', telefon: '000 000 004', adreca: 'Carrer Fictici, 4', cp: '08201', poblacio: 'Sabadell', notes: 'Trucar abans de passar' },
           { tanda: 13, fa: 20, lots: 4, nom: 'Sílvia', cognoms: 'Demo', email: 'silvia@exemple.invalid', telefon: '000 000 005', adreca: 'Carrer Demo, 5', cp: '25560', poblacio: 'Sort', notes: '' },
           { tanda: 14, fa: 12, lots: 1, nom: 'Pere', cognoms: 'Inventat', email: 'pere@exemple.invalid', telefon: '000 000 006', adreca: 'Carrer Inventat, 6, 1r', cp: '08221', poblacio: 'Terrassa', notes: '' },
@@ -160,7 +169,7 @@
           { tanda: 14, fa: 8, lots: 3, nom: 'Quim', cognoms: 'Exemple', email: 'quim@exemple.invalid', telefon: '000 000 008', adreca: 'Carrer d’Exemple, 8', cp: '25560', poblacio: 'Sort', notes: '' },
           { tanda: 14, fa: 6, lots: 2, nom: 'Anna', cognoms: 'Mostra', email: 'anna@exemple.invalid', telefon: '000 000 009', adreca: 'Carrer de Mostra, 9, àtic', cp: '08240', poblacio: 'Manresa', notes: '' },
           { tanda: 14, fa: 4, lots: 5, nom: 'Oriol', cognoms: 'Prova', email: 'oriol@exemple.invalid', telefon: '000 000 010', adreca: 'Camí de Prova, 10', cp: '25620', poblacio: 'Tremp', notes: '' },
-          { tanda: 14, fa: 2, lots: 1, nom: 'Carla', cognoms: 'Fictícia', email: 'carla@exemple.invalid', telefon: '000 000 011', adreca: 'Carrer Fictici, 11', cp: '43201', poblacio: 'Reus', notes: '' },
+          { tanda: 14, fa: 2, lots: 1, nom: 'Jordi', cognoms: 'Mostra', email: 'jordi@exemple.invalid', telefon: '000 000 002', adreca: 'Carrer de Mostra, 2', cp: '17001', poblacio: 'Girona', notes: '' },
           { tanda: 14, fa: 1, lots: 5, nom: 'Biel', cognoms: 'Demo', email: 'biel@exemple.invalid', telefon: '000 000 012', adreca: 'Plaça Demo, 12', cp: '08400', poblacio: 'Granollers', notes: 'Cal factura' },
         ],
       },
