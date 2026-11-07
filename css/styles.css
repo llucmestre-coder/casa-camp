@@ -1,4 +1,4 @@
-/* Casa Camp — home i full de compra. Combinació aprovada a la Fase 1 (PLA.md §Disseny): paleta A «Llosa», lletra
+/* Casa Camp — home i full de compra. Combinació aprovada a la Fase 1 (PLA.md §Disseny): paleta «Oliva» (07/11/2026), lletra
    Schibsted Grotesk, barra simple, botons píndola, full de compra B. Tokens a :root; tot el que hi ha sota només fa
    servir variables. Aquest fitxer també el carrega el panell (components comuns: botons, camps, barra). */
 
@@ -10,11 +10,20 @@
 
 /* ---------- Tokens ---------- */
 :root{
-  /* Paleta «Bosc» (07/11/2026, PLA.md §«Paleta Bosc»): el verd del logo fa d'accent; el granat es queda al botó */
-  --fons:#EDEFE8; --superficie:#FFFFFF; --bloc:#FFFFFF; --text:#243027; --text-2:#4C5A4F;
-  --fosc:#27332A; --sobre-fosc:#FFFFFF; --sobre-fosc-2:#D2DAD0;
-  --cta:#7A2A23; --cta-fosc:#5E1F1A; --sobre-cta:#FFFFFF; --accent:#677B62; --tria:#F1E4E2;
-  --linia:#C4CBC0; --vora:#7D877A; --suau:#DCE2D7;
+  /* Paleta «Oliva» (en Lluc, 07/11/2026; Ductik/inspiracio/DECISIONS.md peça 22, paleta 3; substitueix «Bosc»).
+     Escala: els cinc codis de la imatge (950–300) i dos clars fets a partir del 300 (200–50) per al fons. El
+     gris verdós és el neutre de la paleta. Res de granat: el botó també és de la paleta. */
+  --oliva-950:#0F1F17; --oliva-900:#1E3A2E; --oliva-700:#3E5A3F; --oliva-500:#6B7F67; --oliva-300:#C7CBB8;
+  --oliva-200:#DCDFD0; --oliva-100:#E7E9DF; --oliva-50:#F2F3EC; --gris-verd:#3D4337;
+  /* Tokens per funció, 60-30-10 (peça 12): 60 % el fons clar (50 i blanc), 30 % el verd bosc (900: franja, peu i
+     text 950), 10 % l'accent (el botó, 900, i els enllaços i el focus, 700).
+     Contrast: text 950 sobre 50 15,3:1 · gris verdós sobre 50 9,2:1 · 700 sobre 50 6,9:1 · blanc sobre 900 12,4:1 ·
+     300 sobre 900 7,5:1. El 500 (3,9:1 sobre 50) només per a línies, icones i vores, mai per a text. */
+  --fons:var(--oliva-50); --superficie:#FFFFFF; --bloc:#FFFFFF; --text:var(--oliva-950); --text-2:var(--gris-verd);
+  --fosc:var(--oliva-900); --sobre-fosc:#FFFFFF; --sobre-fosc-2:var(--oliva-300);
+  --cta:var(--oliva-900); --cta-fosc:var(--oliva-950); --sobre-cta:#FFFFFF; --accent:var(--oliva-700); --tria:var(--oliva-100);
+  --linia:var(--oliva-300); --vora:var(--oliva-500); --suau:var(--oliva-200);
+  --error:#9B2C22; /* estat, fora de la paleta: un error ha de semblar un error (7,6:1 sobre blanc) */
 
   --f-titol:"Schibsted Grotesk",system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
   --f-cos:"Schibsted Grotesk",system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
@@ -26,7 +35,7 @@
   /* Marge lateral de totes les seccions: el de sempre i, a pantalles amples, el que centra 1320 px de contingut.
      Així totes les seccions comencen al mateix punt (el 100% es resol a cada element: l'amplada de la pàgina). */
   --x:max(var(--marge-x),calc((100% - var(--amplada-max)) / 2));
-  --vel:rgba(16,24,18,.5);
+  --vel:rgba(15,31,23,.5);
 }
 
 /* ---------- Base ---------- */
@@ -62,8 +71,8 @@ h1,h2,h3{font-family:var(--f-titol);letter-spacing:var(--track);text-wrap:balanc
 .enllac-boto{display:inline;min-height:0;padding:0;border:0;background:none;color:var(--cta);font:600 .94rem/1.4 var(--f-cos);text-decoration:underline;text-underline-offset:3px;cursor:pointer}
 @media (hover:hover){.enllac-boto:hover{color:var(--cta-fosc)}}
 
-/* ---------- Barra de la tanda (simple: part plena de llosa sobre una pista de pedra) ---------- */
-.barra{--b-ple:var(--accent);--b-pista:var(--linia);position:relative;height:10px;border-radius:999px;background:var(--b-pista);overflow:hidden}
+/* ---------- Barra de la tanda: part plena oliva 500 sobre una pista oliva 300 (els teus lots, 900) ---------- */
+.barra{--b-ple:var(--oliva-500);--b-pista:var(--linia);position:relative;height:10px;border-radius:999px;background:var(--b-pista);overflow:hidden}
 .barra>i{display:block;height:100%;width:0;border-radius:inherit;background:var(--b-ple)}
 .franja .barra{--b-ple:var(--sobre-fosc);--b-pista:rgba(255,255,255,.28);width:200px;flex:none}
 
@@ -77,7 +86,7 @@ h1,h2,h3{font-family:var(--f-titol);letter-spacing:var(--track);text-wrap:balanc
 .hero picture{display:contents}
 .hero-foto{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;object-position:50% 52%}
 /* vel calculat amb el pitjor cas, una foto blanca (§4): ≥ .66 de negre fins al 46 % de l'amplada */
-.hero::after{content:"";position:absolute;inset:0;pointer-events:none;background:linear-gradient(90deg,rgba(16,24,18,.82) 0,rgba(16,24,18,.66) 46%,rgba(16,24,18,.18) 78%,rgba(16,24,18,.05) 100%),linear-gradient(180deg,rgba(16,24,18,.35) 0,rgba(16,24,18,0) 25%)}
+.hero::after{content:"";position:absolute;inset:0;pointer-events:none;background:linear-gradient(90deg,rgba(15,31,23,.82) 0,rgba(15,31,23,.66) 46%,rgba(15,31,23,.18) 78%,rgba(15,31,23,.05) 100%),linear-gradient(180deg,rgba(15,31,23,.35) 0,rgba(15,31,23,0) 25%)}
 .hero-text{position:relative;z-index:2;max-width:46rem;padding:92px var(--marge-x);margin-left:calc(var(--x) - var(--marge-x))}
 .hero h1{font-weight:var(--pes-titol);font-size:var(--t-hero);line-height:1.04;margin:0 0 .7rem;max-width:16ch}
 .hero p{font-size:clamp(1rem,1.2vw,1.125rem);max-width:32rem;margin:0 0 1.25rem}
@@ -104,7 +113,7 @@ h2{font-weight:var(--pes-titol);font-size:var(--t-h2);line-height:1.08;margin:0}
 
 /* ---------- El lot: fitxa de compra C «Mostrador» (foto | nom i peces | caixa de compra; PLA.md §«Fitxa de compra del lot»).
    La tanda és informació de compra dins de la caixa, sota el botó. Al mòbil: foto, nom, caixa i peces ---------- */
-.lot-graella{display:grid;grid-template-columns:minmax(0,5fr) minmax(0,4fr) minmax(0,3.6fr);grid-template-areas:"foto cap caixa" "foto peces caixa";grid-template-rows:auto 1fr;gap:1.2rem clamp(20px,3vw,48px);align-items:start}
+.lot-graella{display:grid;grid-template-columns:minmax(0,5fr) minmax(0,4fr) minmax(0,3.6fr);grid-template-areas:"foto cap caixa" "foto peces caixa" "info info info";grid-template-rows:auto 1fr auto;gap:1.2rem clamp(20px,3vw,48px);align-items:start}
 .l-foto{grid-area:foto;position:relative;align-self:stretch;min-height:300px;margin:0;border-radius:4px;overflow:hidden;background:var(--suau)}
 .l-foto img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;object-position:78% 50%}
 .l-cap{grid-area:cap}
@@ -134,10 +143,11 @@ h2{font-weight:var(--pes-titol);font-size:var(--t-h2);line-height:1.08;margin:0}
 .l-tanda b{font:var(--pes-sub) 1.02rem/1.25 var(--f-titol);letter-spacing:var(--track)}
 .l-tanda .barra{height:8px;margin:.5rem 0 .35rem}
 .t-queden{font-size:var(--t-petit);color:var(--text-2)}
-.l-info{margin:.8rem 0 0}
-.l-info div{padding:.55rem 0;border-top:1px solid var(--linia)}
-.l-info dt{font-weight:700}
-.l-info dd{margin:.1rem 0 0;color:var(--text-2)}
+/* Entrega, enviament i pagament: franja de tres columnes a tota l'amplada, sota la fitxa (07/11/2026) */
+.l-info{grid-area:info;display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:0 clamp(20px,3vw,48px);margin:.4rem 0 0}
+.l-info div{padding:.6rem 0 0;border-top:2px solid var(--text)}
+.l-info dt{font:var(--pes-sub) 1rem/1.3 var(--f-titol);letter-spacing:var(--track)}
+.l-info dd{margin:.2rem 0 0;color:var(--text-2);font-size:.94rem;max-width:30rem}
 .l-enllac{display:inline-block;margin-top:.6rem;color:var(--cta);font-weight:600;text-underline-offset:3px}
 @media (hover:hover){.l-enllac:hover{color:var(--cta-fosc)}}
 
@@ -152,8 +162,10 @@ h2{font-weight:var(--pes-titol);font-size:var(--t-h2);line-height:1.08;margin:0}
 .c-mida input:focus-visible+span{outline:3px solid var(--accent);outline-offset:2px}
 @media (hover:hover){.c-mida input:not(:checked)+span:hover{background:var(--superficie)}}
 
-/* ---------- Segell ecològic i preguntes ---------- */
-.faq{display:grid;grid-template-columns:minmax(0,4fr) minmax(0,8fr);gap:20px clamp(24px,4vw,64px);align-items:start}
+/* ---------- Segell ecològic i preguntes ----------
+   Preguntes: títol a dalt i llista a sota, en una columna que comença al marge esquerre (en Lluc, 07/11/2026) */
+.faq{display:block}
+.faq-llista{margin-top:1.2rem}
 .segell{background:var(--bloc);padding-block:clamp(28px,4vw,44px)}
 .segell>*,.faq>*{max-width:none}
 .segell h2,.faq h2{line-height:1.05}
@@ -166,7 +178,7 @@ h2{font-weight:var(--pes-titol);font-size:var(--t-h2);line-height:1.08;margin:0}
 .faq summary::after{content:"+";flex:none;width:1.2em;text-align:center;font:400 1.6rem/1 var(--f-cos);color:var(--accent)}
 .faq details[open] summary::after{content:"−"}
 .faq details p{margin:0 0 .9rem;max-width:40rem;color:var(--text-2)}
-.faq-final{grid-column:2;margin:.6rem 0 0;max-width:48rem}
+.faq-final{margin:.9rem 0 0;max-width:48rem}
 .faq-final a{font-weight:700}
 
 /* ---------- Peu ---------- */
@@ -236,10 +248,10 @@ body.full-obert .full{transform:none;visibility:visible;transition:transform .32
 .camp input,.camp textarea{width:100%;min-height:56px;padding:1.45rem 18px .4rem;border:1px solid var(--vora);border-radius:var(--radi-camp);background:var(--superficie);color:var(--text);font:400 1rem var(--f-cos)}
 .camp textarea{min-height:84px;resize:vertical}
 .camp:has(textarea) label{pointer-events:none}
-.camp .error{padding-left:19px;color:var(--cta);font-size:var(--t-petit);font-weight:600}
-.camp.amb-error input,.camp.amb-error textarea{border-color:var(--cta);box-shadow:inset 0 0 0 1px var(--cta)}
-.camp.amb-error label{color:var(--cta)}
-.avis-errors{margin:.8rem 0 0;color:var(--cta);font-weight:700}
+.camp .error{padding-left:19px;color:var(--error);font-size:var(--t-petit);font-weight:600}
+.camp.amb-error input,.camp.amb-error textarea{border-color:var(--error);box-shadow:inset 0 0 0 1px var(--error)}
+.camp.amb-error label{color:var(--error)}
+.avis-errors{margin:.8rem 0 0;color:var(--error);font-weight:700}
 .pas>.boto{margin-top:1rem}
 
 /* Desglossament */
@@ -248,39 +260,10 @@ body.full-obert .full{transform:none;visibility:visible;transition:transform .32
 .desglos .total{border-top:1.5px solid var(--text);padding-top:.5rem;font:var(--pes-titol) 1.25rem var(--f-titol)}
 .nota-enviament{margin:.5rem 0 0;font-size:var(--t-petit);color:var(--text-2)}
 
-/* Pagament */
-.recorda{margin:0 0 1rem;font-size:.94rem;color:var(--text-2)}
-/* Pagament exprés: botons de cartera amb el format de cada marca (negres, logo i «Pay»), ratlla i la targeta a sota */
-.expres{display:grid;grid-auto-flow:column;grid-auto-columns:minmax(0,1fr);gap:.5rem}
-.ratlla{display:flex;align-items:center;gap:.75rem;margin:1rem 0;font-size:var(--t-petit);color:var(--text-2)}
-.ratlla::before,.ratlla::after{content:"";flex:1;height:1px;background:var(--linia)}
-/* .camps-targeta (no .targeta: el panell fa servir .targeta per a les seves targetes i heretava aquesta graella) */
-.camps-targeta{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:.75rem}
-.camps-targeta .camp:first-child{grid-column:1/-1}
-.nota-targeta{margin:.8rem 0 0;font-size:var(--t-petit);color:var(--text-2)}
-.paga{margin-top:1rem}
-/* Negre pur, com demanen Apple i Google per als seus botons; lletra del sistema, no la de la web */
-.boto-cartera{width:100%;min-height:48px;padding:0 1rem;border:0;border-radius:var(--radi-camp);background:#000;color:#fff;font:500 1.15rem/1 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;letter-spacing:-.01em;cursor:pointer}
-@media (hover:hover){.boto-cartera:hover{background:#2b2b2b}}
-.boto-cartera:active{background:#2b2b2b}
-.boto-cartera[disabled]{cursor:not-allowed}
-.boto-cartera[aria-busy="true"]{opacity:.6;cursor:progress}
-.marca-cartera{display:inline-flex;align-items:center;gap:.3rem}
-.marca-cartera svg{display:block;flex:none}
-#paga-apple .marca-cartera{gap:.1rem}
-#paga-apple svg{margin-top:-.15em}
-.error-pagament{margin:.8rem 0 0;padding:.7rem .9rem;border-radius:var(--radi-camp);background:var(--tria);color:var(--cta-fosc);font-weight:600}
+/* Pas 3 sense pagament per la web (sense ?presentacio): el telèfon. El pagament és a pagament.html (css/pagament.css) */
 .sense-pagament h4{margin:0 0 .5rem;font:var(--pes-titol) 1.3rem/1.15 var(--f-titol);color:var(--text);letter-spacing:var(--track)}
 .sense-pagament p{margin:0 0 .6rem}
 .sense-pagament .telefon-gran{font:var(--pes-titol) 1.8rem/1.1 var(--f-titol);letter-spacing:var(--track)}
-.avis-storage{margin:.8rem 0 0;font-size:var(--t-petit);color:var(--text-2)}
-
-/* Confirmació */
-.confirmacio{padding:18px 24px 28px}
-.confirmacio h3{margin:0 0 1rem;font:var(--pes-titol) 1.5rem/1.15 var(--f-titol);color:var(--text);letter-spacing:var(--track)}
-.confirmacio ul{list-style:none;margin:0 0 1rem;padding:0;display:grid;gap:.5rem}
-.confirmacio li{padding-top:.5rem;border-top:1px solid var(--linia)}
-.confirmacio p{margin:0 0 .8rem}
 
 /* Hover (només amb ratolí): els botons canvien de color en 0,15 s i les preguntes responen */
 @media (hover:hover){
@@ -297,13 +280,13 @@ body.full-obert .full{transform:none;visibility:visible;transition:transform .32
 
 /* ---------- Mòbil ---------- */
 @media (max-width:860px){
-  .hero::after{background:linear-gradient(180deg,rgba(16,24,18,.5) 0,rgba(16,24,18,.64) 14%,rgba(16,24,18,.72) 100%)}
+  .hero::after{background:linear-gradient(180deg,rgba(15,31,23,.5) 0,rgba(15,31,23,.64) 14%,rgba(15,31,23,.72) 100%)}
   .qui{grid-template-columns:minmax(0,1fr);grid-template-areas:"titol" "text" "foto"}
-  .lot-graella{grid-template-columns:minmax(0,1fr);grid-template-areas:"foto" "cap" "caixa" "peces";grid-template-rows:none}
+  .lot-graella{grid-template-columns:minmax(0,1fr);grid-template-areas:"foto" "cap" "caixa" "peces" "info";grid-template-rows:none}
+  .l-info{grid-template-columns:minmax(0,1fr);gap:.9rem}
   .l-foto{min-height:0}
   .l-foto img{position:static;aspect-ratio:4/3;height:auto}
-  .segell,.faq,.peu{grid-template-columns:minmax(0,1fr)}
-  .faq-final{grid-column:auto}
+  .segell,.peu{grid-template-columns:minmax(0,1fr)}
   .demana-mobil{display:flex}
   .peu{padding-bottom:88px}
   .peu-simple{padding-bottom:24px}
@@ -314,5 +297,5 @@ body.full-obert .full{transform:none;visibility:visible;transition:transform .32
   .segell ul{grid-template-columns:minmax(0,1fr)}
   .full{top:auto;left:0;right:0;bottom:0;width:100%;max-height:82svh;border-radius:14px 14px 0 0;transform:translateY(100%);padding-bottom:env(safe-area-inset-bottom)}
   .full-cap{border-radius:14px 14px 0 0}
-  .camps,.camps-targeta{grid-template-columns:minmax(0,1fr)}
+  .camps{grid-template-columns:minmax(0,1fr)}
 }

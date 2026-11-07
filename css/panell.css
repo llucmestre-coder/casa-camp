@@ -102,7 +102,7 @@ body.app{--x-app:calc(max(0px,(100% - 960px) / 2) + var(--marge-x))}
 .camp-pla{display:grid;gap:.25rem}
 .camp-pla label{font-weight:700;font-size:.92rem}
 .camp-pla input,.camp-pla select{width:100%;min-height:48px;padding:.5rem .8rem;border:1.5px solid var(--vora);border-radius:var(--radi-camp);background:var(--superficie);color:var(--text);font:400 1rem var(--f-cos)}
-.error-pla{margin:.3rem 0 0;color:var(--cta);font-weight:600;font-size:var(--t-petit)}
+.error-pla{margin:.3rem 0 0;color:var(--error);font-weight:600;font-size:var(--t-petit)}
 .error-pla[hidden]{display:none}
 .opcions{margin:0;padding:0;border:0;display:grid;gap:.5rem}
 .opcions legend{padding:0 0 .6rem;font-weight:700}
@@ -148,7 +148,7 @@ body.app{--x-app:calc(max(0px,(100% - 960px) / 2) + var(--marge-x))}
 /* ---------- Avui: llista de feina i «Ha passat» ---------- */
 /* La vora de l'esquerra diu l'ordre: granat = bloqueja diners o entregues, fosc = té data, gris = informatiu */
 .tasques .tasca{padding-left:1.1rem;box-shadow:inset 4px 0 0 var(--linia)}
-.tasques .tasca-bloqueja{box-shadow:inset 4px 0 0 var(--cta)}
+.tasques .tasca-bloqueja{box-shadow:inset 4px 0 0 var(--error)}
 .tasques .tasca-data{box-shadow:inset 4px 0 0 var(--fosc)}
 .passats{list-style:none;margin:0;padding:0;display:grid;gap:.5rem}
 .passats li{display:grid;gap:.1rem;padding:.55rem .9rem;background:var(--bloc);border-radius:6px;overflow-wrap:anywhere}

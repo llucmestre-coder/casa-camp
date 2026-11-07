@@ -1,0 +1,125 @@
+/* Casa Camp — pàgina de pagament (pagament.html). Aspecte de passarel·la neutra (en Lluc, 07/11/2026): lletra del
+   sistema, blanc i grisos, sense els colors de la web. Resum a l'esquerra, pagament a la dreta; al mòbil, un a sobre
+   de l'altre. Contrast: text #1A1F23 i #59636E sobre blanc i sobre #F6F7F8 (≥ 5,9:1); botó blanc sobre #1F2A33. */
+
+:root{
+  --pg-text:#1A1F23; --pg-text-2:#59636E; --pg-vora:#CFD5DC; --pg-filet:#E3E7EB;
+  --pg-fons:#FFFFFF; --pg-fons-resum:#F6F7F8;
+  --pg-boto:#1F2A33; --pg-boto-fosc:#0E151B; --pg-focus:#2F6FEB;
+  --pg-error:#B42318; --pg-error-fons:#FEF3F2; --pg-ok:#1E7A4C;
+  --pg-radi:8px;
+  --pg-lletra:system-ui,-apple-system,"Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif;
+}
+*{box-sizing:border-box}
+html{-webkit-text-size-adjust:100%}
+body.pg{margin:0;background:var(--pg-fons);color:var(--pg-text);font:400 15px/1.5 var(--pg-lletra)}
+img{display:block;max-width:100%;height:auto}
+a{color:inherit}
+:focus-visible{outline:2px solid var(--pg-focus);outline-offset:2px}
+[hidden]{display:none!important}
+.sr-nomes{position:absolute;width:1px;height:1px;margin:-1px;padding:0;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap;border:0}
+
+/* ---------- Marc: dues meitats, cada columna de 420 px com a molt, tocant al mig ---------- */
+.pg-marc{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);min-height:100vh;min-height:100svh}
+.pg-resum{display:flex;justify-content:flex-end;padding:56px clamp(24px,5vw,72px);background:var(--pg-fons-resum);border-right:1px solid var(--pg-filet)}
+.pg-pagament{display:flex;flex-direction:column;align-items:flex-start;padding:56px clamp(24px,5vw,72px) 32px}
+.pg-columna{width:100%;max-width:420px}
+
+/* ---------- Resum ---------- */
+.pg-torna{display:inline-flex;align-items:center;gap:.55rem;min-height:44px;font-weight:600;text-decoration:none}
+.pg-torna img{width:32px;height:32px}
+@media (hover:hover){.pg-torna:hover span:last-child{text-decoration:underline}}
+.pg-eti{margin:2rem 0 .2rem;color:var(--pg-text-2);font-weight:500}
+.pg-import{margin:0;font-size:2.25rem;font-weight:700;line-height:1.1;letter-spacing:-.02em;font-variant-numeric:tabular-nums}
+.pg-linies{list-style:none;margin:2rem 0 0;padding:0}
+.pg-linia{display:grid;grid-template-columns:48px minmax(0,1fr) auto;gap:.9rem;align-items:center}
+.pg-linia img{width:48px;height:48px;border-radius:6px;object-fit:cover;background:var(--pg-filet)}
+.pg-linia b{display:block;font-weight:600}
+.pg-linia small{color:var(--pg-text-2);font-size:.86rem}
+.pg-xifres{margin:1.4rem 0 0;padding:0 0 0 calc(48px + .9rem);display:grid;gap:.5rem;font-variant-numeric:tabular-nums}
+.pg-xifres div{display:flex;justify-content:space-between;gap:1rem}
+.pg-xifres dt{color:var(--pg-text-2)}
+.pg-xifres dd{margin:0}
+.pg-xifres .pg-total{padding-top:.7rem;border-top:1px solid var(--pg-vora);font-weight:700}
+.pg-xifres .pg-total dt{color:var(--pg-text)}
+.pg-entrega{margin:2rem 0 0;padding:1rem 0 0;border-top:1px solid var(--pg-filet);font-size:.9rem;color:var(--pg-text-2)}
+.pg-entrega p{margin:0 0 .5rem}
+.pg-entrega b{color:var(--pg-text);font-weight:600}
+
+/* ---------- Pagament ---------- */
+.pg-titol{margin:0 0 1.2rem;font-size:1.25rem;font-weight:600;letter-spacing:-.01em}
+.pg-expres{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:.6rem}
+.pg-cartera{display:inline-grid;place-items:center;width:100%;min-height:48px;padding:0 1rem;border:0;border-radius:var(--pg-radi);background:#000;color:#fff;font:500 1.12rem/1 var(--pg-lletra);letter-spacing:-.01em;cursor:pointer}
+.pg-cartera>span{grid-area:1/1}
+@media (hover:hover){.pg-cartera:hover{background:#2b2b2b}}
+.pg-marca{display:inline-flex;align-items:center;gap:.3rem}
+.pg-marca svg{display:block;flex:none}
+#pg-apple .pg-marca{gap:.1rem}
+#pg-apple svg{margin-top:-.15em}
+.pg-ratlla{display:flex;align-items:center;gap:.8rem;margin:1.4rem 0;color:var(--pg-text-2);font-size:.88rem}
+.pg-ratlla::before,.pg-ratlla::after{content:"";flex:1;height:1px;background:var(--pg-filet)}
+
+.pg-camp{margin:0 0 1rem}
+.pg-camp>label,.pg-grup>legend{display:block;margin:0 0 .35rem;padding:0;font-size:.86rem;font-weight:500;color:var(--pg-text-2)}
+.pg-camp input,.pg-grup input{display:block;width:100%;height:44px;margin:0;padding:0 12px;border:1px solid var(--pg-vora);border-radius:var(--pg-radi);background:#fff;color:var(--pg-text);font:400 16px var(--pg-lletra);box-shadow:0 1px 1px rgba(16,24,32,.04)}
+.pg-camp input:focus,.pg-grup input:focus{outline:none;border-color:var(--pg-focus);box-shadow:0 0 0 3px rgba(47,111,235,.22);position:relative;z-index:1}
+.pg-grup{margin:0 0 1rem;padding:0;border:0;min-width:0}
+/* La targeta: un sol requadre partit (número a dalt; caducitat i CVC a sota) */
+.pg-targeta{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr)}
+.pg-targeta .pg-num{grid-column:1/-1;position:relative}
+.pg-targeta .pg-num input{border-radius:var(--pg-radi) var(--pg-radi) 0 0;padding-right:48px}
+.pg-targeta .pg-num svg{position:absolute;right:12px;top:50%;transform:translateY(-50%);z-index:2;color:var(--pg-text-2);pointer-events:none}
+.pg-targeta .pg-exp input{margin-top:-1px;border-radius:0 0 0 var(--pg-radi)}
+.pg-targeta .pg-cvc input{margin-top:-1px;margin-left:-1px;width:calc(100% + 1px);border-radius:0 0 var(--pg-radi) 0}
+.pg-camp.pg-mal input,.pg-grup input[aria-invalid="true"]{border-color:var(--pg-error);position:relative;z-index:1}
+.pg-error{margin:.4rem 0 0;color:var(--pg-error);font-size:.86rem}
+.pg-error span{display:block}
+
+.pg-paga{display:inline-grid;place-items:center;width:100%;min-height:48px;margin-top:.4rem;padding:0 1rem;border:0;border-radius:var(--pg-radi);background:var(--pg-boto);color:#fff;font:600 1rem/1 var(--pg-lletra);cursor:pointer}
+.pg-paga>span{grid-area:1/1}
+@media (hover:hover){.pg-paga:hover{background:var(--pg-boto-fosc)}}
+.pg-paga:active{background:var(--pg-boto-fosc)}
+/* Botó d'espera: les dues etiquetes a la mateixa cel·la, perquè no canviï de mida */
+.pg-paga>span+span,.pg-cartera>span+span,[aria-busy="true"]>span:first-child{visibility:hidden}
+[aria-busy="true"]>span+span{visibility:visible}
+[aria-busy="true"]{opacity:.7;cursor:progress}
+.pg-roda{display:inline-flex;align-items:center;gap:.5rem}
+.pg-roda::before{content:"";width:14px;height:14px;border:2px solid currentColor;border-right-color:transparent;border-radius:50%;animation:pg-gira .7s linear infinite}
+@keyframes pg-gira{to{transform:rotate(360deg)}}
+.pg-nota{margin:.8rem 0 0;color:var(--pg-text-2);font-size:.86rem}
+.pg-avis{margin:1rem 0 0;padding:.75rem .9rem;border-radius:var(--pg-radi);background:var(--pg-error-fons);color:var(--pg-error);font-weight:500}
+
+/* Sense comanda o sense pagament per la web */
+.pg-missatge p{margin:0 0 .8rem}
+.pg-tel{font-size:1.6rem;font-weight:700;letter-spacing:-.01em}
+.pg-boto-sec{display:inline-flex;align-items:center;justify-content:center;min-height:44px;padding:0 1.1rem;border:1px solid var(--pg-vora);border-radius:var(--pg-radi);background:#fff;color:var(--pg-text);font-weight:600;text-decoration:none}
+@media (hover:hover){.pg-boto-sec:hover{background:var(--pg-fons-resum)}}
+a.pg-paga{text-decoration:none}
+
+/* Confirmació */
+.pg-fet{display:grid;place-items:center;width:48px;height:48px;margin:0 0 1rem;border-radius:50%;background:#E7F4EC;color:var(--pg-ok)}
+.pg-confirmacio h2{margin:0 0 .6rem;font-size:1.4rem;font-weight:600;letter-spacing:-.01em}
+.pg-confirmacio ul{list-style:none;margin:1.2rem 0;padding:0;display:grid;gap:.6rem}
+.pg-confirmacio li{padding-top:.6rem;border-top:1px solid var(--pg-filet)}
+.pg-confirmacio p{margin:0 0 .8rem}
+
+/* Peu */
+.pg-peu{width:100%;max-width:420px;margin-top:auto;padding-top:2.5rem;color:var(--pg-text-2);font-size:.82rem}
+.pg-peu p{display:flex;align-items:center;gap:.4rem;margin:0 0 .4rem}
+.pg-peu nav{display:flex;gap:1.2rem}
+.pg-peu a{text-decoration:none}
+@media (hover:hover){.pg-peu a:hover{text-decoration:underline}}
+
+/* ---------- Mòbil: el resum a dalt, el pagament a sota ---------- */
+@media (max-width:860px){
+  .pg-marc{grid-template-columns:minmax(0,1fr)}
+  .pg-resum,.pg-pagament{justify-content:center;align-items:center;padding:20px 16px}
+  .pg-resum{border-right:0;border-bottom:1px solid var(--pg-filet)}
+  .pg-pagament{padding-top:28px}
+  .pg-eti{margin-top:1.2rem}
+  .pg-linies{margin-top:1.2rem}
+  .pg-entrega{margin-top:1.2rem}
+}
+@media (prefers-reduced-motion:reduce){
+  .pg-roda::before{animation-duration:2.4s}
+}

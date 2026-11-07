@@ -1,0 +1,49 @@
+<!doctype html>
+<html lang="ca">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex">
+<title>Pagament · Casa Camp</title>
+<meta name="description" content="Pagament de la comanda de Casa Camp amb targeta, Apple Pay o Google Pay.">
+<meta property="og:type" content="website">
+<meta property="og:title" content="Pagament · Casa Camp">
+<meta property="og:description" content="Pagament de la comanda de Casa Camp amb targeta, Apple Pay o Google Pay.">
+<!-- PENDENT: og:image amb URL absoluta quan hi hagi domini ([DOMINI]), com a la home -->
+
+<link rel="icon" href="assets/favicon.ico" sizes="any">
+<link rel="icon" type="image/png" sizes="32x32" href="assets/favicon-32.png">
+<link rel="apple-touch-icon" href="assets/apple-touch-icon.png">
+<link rel="stylesheet" href="css/pagament.css">
+</head>
+<body class="pg">
+<!-- Pàgina de pagament a part, amb l'aspecte d'una passarel·la neutra (en Lluc, 07/11/2026): a l'esquerra, qui cobra i
+     el resum de la comanda; a la dreta, el pagament. Sense els colors de la web. A la maqueta, el pagament és simulat i
+     només funciona amb ?presentacio; a la versió real, aquesta pàgina la posa la passarel·la (Stripe Checkout o
+     similar) i el resum surt del servidor. La pinta js/pagament.js. -->
+<div class="pg-marc">
+  <aside class="pg-resum" aria-label="Resum de la comanda">
+    <div class="pg-columna">
+      <a class="pg-torna" id="pg-torna" href="index.html#comanda"><span aria-hidden="true">←</span><img src="assets/logo-verd.webp" alt="" width="200" height="206"><span>Casa Camp</span></a>
+      <div id="pg-resum-cos"></div>
+    </div>
+  </aside>
+
+  <main class="pg-pagament">
+    <h1 class="pg-columna pg-titol" id="pg-titol" tabindex="-1">Paga la comanda</h1>
+    <div class="pg-columna" id="pg-cos">
+      <noscript><p>Per pagar cal JavaScript. Pots fer la comanda per telèfon al <a href="tel:+34646455128">646 455 128</a>.</p></noscript>
+    </div>
+    <footer class="pg-peu">
+      <p class="pg-segur"><svg viewBox="0 0 16 16" width="14" height="14" aria-hidden="true" focusable="false"><path fill="currentColor" d="M8 1a3.5 3.5 0 0 0-3.5 3.5V6H4a1.5 1.5 0 0 0-1.5 1.5v6A1.5 1.5 0 0 0 4 15h8a1.5 1.5 0 0 0 1.5-1.5v-6A1.5 1.5 0 0 0 12 6h-.5V4.5A3.5 3.5 0 0 0 8 1zm2 5H6V4.5a2 2 0 1 1 4 0V6z"/></svg>Pagament segur, amb connexió xifrada</p>
+      <nav aria-label="Textos legals"><a href="avis-legal.html">Avís legal</a><a href="privacitat.html">Privacitat</a></nav>
+    </footer>
+  </main>
+</div>
+
+<script src="js/dades.js"></script>
+<script src="js/magatzem.js"></script>
+<script src="js/comu.js"></script>
+<script src="js/pagament.js"></script>
+</body>
+</html>

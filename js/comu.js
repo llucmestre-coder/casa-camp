@@ -71,5 +71,34 @@
   // caixa del lot (js/home.js), amb la mateixa cadena
   const fraseTandaSeguent = (dataLimit) => `Perquè t'arribi tot junt, va a la tanda següent, oberta fins al ${dataCurta(dataLimit)}.`;
 
-  window.CasaCamp = { fraseTandaSeguent, MESOS, dataCurta, dataHora, lots, queden, producte, diesEntrega, ambPresentacio, desaDades, esc, importLots, importEnviament, importTotal, kg, z2 };
+  // Imports d'una compra abans de pagar (full de compra i pàgina de pagament): preu del producte, enviament pel codi
+  // postal i total. Les canals no van per tandes: l'entrega és per acordar i el total és el producte.
+  function resumCompra(id, n, cp) {
+    const p = D.productes[id];
+    const aPart = !p.ocupaPlaces;
+    const preu = importLots(id, n);
+    const env = D.costEnviament(cp);
+    const mostra = D.preuProducte(id, n).mostra || env.mostra;
+    let total = null;
+    if (aPart) total = preu;
+    else if (env.valid) total = mostra ? p.etiquetaMostra || D.lot.etiquetaMostra : D.formatEuros(D.preuProducte(id, n).import + env.import);
+    const unitari = D.lot.preuMostra ? D.lot.etiquetaMostra : D.formatEuros(D.lot.preu);
+    return { aPart, preu, env, total, unitari };
+  }
+
+  // La comanda que passa del full de compra a la pàgina de pagament (sessionStorage: només aquesta pestanya)
+  const CLAU_COMANDA = 'casacamp-comanda';
+  const comandaEnCurs = {
+    desa(c) {
+      try { sessionStorage.setItem(CLAU_COMANDA, JSON.stringify(c)); return sessionStorage.getItem(CLAU_COMANDA) !== null; } catch (e) { return false; }
+    },
+    llegeix() {
+      try { const c = JSON.parse(sessionStorage.getItem(CLAU_COMANDA)); return c && c.client ? c : null; } catch (e) { return null; }
+    },
+    esborra() {
+      try { sessionStorage.removeItem(CLAU_COMANDA); } catch (e) { /* res */ }
+    },
+  };
+
+  window.CasaCamp = { fraseTandaSeguent, MESOS, dataCurta, dataHora, lots, queden, producte, diesEntrega, ambPresentacio, desaDades, esc, importLots, importEnviament, importTotal, kg, z2, resumCompra, comandaEnCurs };
 })();

@@ -1,27 +1,25 @@
 /* Casa Camp — moviment (criteri general del 04/11/2026, CLAUDE.md §«Criteri general de moviment»).
    Es carrega després de comu.js i abans de compra.js i home.js, que només hi fan les crides de `window.Moviment`.
    Idees: A trams de la tanda · B els teus lots · C mitja o sencera · D preguntes · E i F xifres del full ·
-          H confirmació · I fotos que es destapen · J títols per línies (07/11/2026: canvia la regla «cap aparició en
-          fer scroll»). Quiets: hero (en Lluc hi passarà una inspiració), capçalera, paràgrafs i peu.
+          I fotos i J títols lligats a l'scroll · K la resta d'elements entren un sol cop (07/11/2026). Sense rebot
+          enlloc (07/11/2026). La H (confirmació) és ara a js/pagament.js. Quiets: hero (en Lluc hi passarà una
+          inspiració), capçalera i franja.
    Tempo: la variable CSS --tempo (css/moviment.css) multiplica totes les durades d'aquí. */
 (function () {
   'use strict';
 
   /* ---------- Paràmetres ---------- */
-  const REBOT = 3;         // px que el valor nou passa de llarg com a molt (criteri general: en px, no en %)
-  const TORNADA = 1;       // px del segon vaivé (el 6/16 del primer, com a la demostració)
+  // Sense rebot (en Lluc, 07/11/2026): el valor nou entra i s'atura al seu lloc, sense passar de llarg.
   const T = {              // ms amb tempo 1,0
-    balanca: 520,          // «Balança»: el valor nou entra, passa de llarg i s'atura
-    suau: 360,             // una xifra que només canvia: menys recorregut i sense rebot
+    balanca: 420,          // el valor nou entra des de sota (o des de l'altra posició) i s'atura
+    suau: 360,             // una xifra que només canvia: menys recorregut
     suauPx: 7,             // recorregut de la xifra suau
     desplega: 320,         // resposta d'una pregunta
-    canvi: 320,            // pas del pagament → confirmació
-    canviPx: 40,
     entraTram: 45,         // entre trams en entrar (només la barra de la tanda)
     tram: 180,             // color d'un tram (també a moviment.css)
+    entrada: 70,           // entre elements que entren alhora en fer scroll
   };
   const CORBA = 'cubic-bezier(.2,.8,.2,1)'; // la del full de compra
-  const VAIVE = 'cubic-bezier(.45,0,.55,1)';
   const ENTRADA_FRANJA = 'visible'; // 'visible' = s'omple quan entra a la pantalla; 'carrega' = en carregar (però el hero és 100svh: no es veuria)
 
   const arrel = document.documentElement;
@@ -40,25 +38,15 @@
   const silenci = (fn) => { silencis++; try { fn(); } finally { silencis--; } };
   const permes = () => tocat && !silencis && !quiet();
 
-  /* ---------- «Balança» ---------- */
-  // El valor nou entra des d'`entra` (p. ex. '100%' o els px que hi ha entre dues posicions), passa de llarg REBOT px
-  // a la meitat, en torna TORNADA al 78 % i s'atura. Sempre en px.
-  // `sentit` és el sentit del recorregut (−1 = cap amunt/esquerra): el rebot va cap a on va el valor.
-  function balanca(el, { eix = 'Y', entra = '100%', final = '0px', sentit = -1, fade = true, pseudo } = {}) {
+  /* ---------- «Balança», ara sense rebot ---------- */
+  // El valor nou entra des d'`entra` (p. ex. '100%' o els px que hi ha entre dues posicions) i s'atura a `final`,
+  // amb la corba del full: frena en arribar i no passa de llarg (en Lluc, 07/11/2026).
+  function balanca(el, { eix = 'Y', entra = '100%', final = '0px', fade = true, pseudo } = {}) {
     if (quiet()) return;
     const tr = (v) => `translate${eix}(${v})`;
-    const al = (px) => (final === '0px' ? `${px}px` : `calc(${final} + ${px}px)`);
     const d = T.balanca * tempo();
     const o = pseudo ? { pseudoElement: pseudo } : {};
-    el.animate(
-      [
-        { transform: tr(entra), offset: 0, easing: CORBA },
-        { transform: tr(al(REBOT * sentit)), offset: 0.5, easing: VAIVE },
-        { transform: tr(al(-TORNADA * sentit)), offset: 0.78, easing: VAIVE },
-        { transform: tr(final), offset: 1 },
-      ],
-      Object.assign({ duration: d }, o)
-    );
+    el.animate([{ transform: tr(entra) }, { transform: tr(final) }], Object.assign({ duration: d, easing: CORBA }, o));
     if (fade) el.animate([{ opacity: 0 }, { opacity: 1 }], { duration: d * 0.35, easing: 'linear' });
   }
 
@@ -220,8 +208,8 @@
     const etiq = fila.querySelectorAll('label');
     const dist = etiq[1].offsetLeft - etiq[0].offsetLeft;
     const cap = r.value === 'canal';
-    // De l'altra posició a la d'ara, passant de llarg REBOT px
-    balanca(fila, { eix: 'X', entra: cap ? '0px' : `${dist}px`, final: cap ? `${dist}px` : '0px', sentit: cap ? 1 : -1, fade: false, pseudo: '::before' });
+    // De l'altra posició a la d'ara
+    balanca(fila, { eix: 'X', entra: cap ? '0px' : `${dist}px`, final: cap ? `${dist}px` : '0px', fade: false, pseudo: '::before' });
   });
 
   /* ---------- D · Preguntes ---------- */
@@ -266,81 +254,120 @@
     desplega(s.parentElement);
   });
 
-  /* ---------- H · Del pagament a la confirmació ---------- */
-  // El pagament marxa cap a l'esquerra i la confirmació entra per la dreta, alhora. `alFinal` fa el canvi de debò
-  // (reiniciar el formulari i deixar només la confirmació); sense moviment es crida de seguida.
-  function confirmacio(cos, sortint, entrant, alFinal) {
-    if (quiet()) { alFinal(); return; }
-    const full = cos.closest('.full');
-    const cap = full.querySelector('.full-cap');
-    const dalt = Math.max(0, full.scrollTop + (cap ? cap.offsetHeight : 0) - cos.offsetTop);
-    cos.style.overflow = 'hidden';
-    entrant.style.cssText = `position:absolute;left:0;right:0;top:${dalt}px`;
-    cos.append(entrant);
-    sortint.inert = true;
-    sortint.setAttribute('aria-hidden', 'true');
-    const d = T.canvi * tempo();
-    const opt = { duration: d, easing: CORBA };
-    const a = sortint.animate([{ transform: 'translateX(0)', opacity: 1 }, { transform: `translateX(-${T.canviPx}px)`, opacity: 0 }], Object.assign({ fill: 'forwards' }, opt));
-    entrant.animate([{ transform: `translateX(${T.canviPx}px)`, opacity: 0 }, { transform: 'translateX(0)', opacity: 1 }], opt);
-    a.onfinish = () => {
-      a.cancel();
-      cos.style.overflow = '';
-      entrant.style.cssText = '';
-      sortint.inert = false;
-      sortint.removeAttribute('aria-hidden');
-      alFinal();
-    };
+  /* ---------- I · Fotos i J · títols, lligats a l'scroll (en Lluc, 07/11/2026) ----------
+     Avancen i reculen amb la roda: la foto es destapa de baix a dalt i els títols pugen per línies a mesura que entren
+     a la pantalla, i es tornen a amagar si tornes a pujar. El JS només calcula el progrés (0–1) i el deixa a --p
+     (fotos) i a --q (cada línia d'un títol); l'estil és a moviment.css. */
+  const FOTOS = '.qs-foto, .lot .l-foto, .canals .l-foto';
+  const TITOLS = '#qui-titol, #lot-titol, #canals-titol, #segell-titol, #faq-titol';
+  // Recorregut: comença quan la vora de dalt entra per baix i s'acaba quan és a aquesta fracció de l'alçada de la pantalla
+  const FI_FOTO = 0.35;
+  const FI_TITOL = 0.62;
+  const RETARD_LINIA = 0.22; // cada línia d'un títol comença una mica més tard que l'anterior (fracció del recorregut)
+
+  const clamp01 = (x) => (x < 0 ? 0 : x > 1 ? 1 : x);
+
+  function partLinies(h) {
+    // Només els espais normals: el no separable («5 kg») manté les dues parts juntes.
+    const parts = h.textContent.split(/([ \t\n\r]+)/);
+    h.textContent = '';
+    parts.forEach((w) => {
+      if (!w) return;
+      if (/^[ \t\n\r]+$/.test(w)) { h.appendChild(document.createTextNode(w)); return; }
+      const caixa = document.createElement('span');
+      caixa.className = 'mv-linia';
+      const s = document.createElement('span');
+      s.textContent = w;
+      caixa.appendChild(s);
+      h.appendChild(caixa);
+    });
   }
 
-  /* ---------- I · Fotos que es destapen · J · Títols per línies (07/11/2026) ---------- */
-  // Un sol cop per visita, quan entren a la pantalla. L'estil és a moviment.css; aquí només es marquen i es vigilen.
-  // Amb moviment reduït o sense IntersectionObserver no es marca res: tot queda visible.
-  function entrades() {
-    if (quiet() || !('IntersectionObserver' in window)) return;
-    const fotos = [...document.querySelectorAll('.qs-foto, .lot .l-foto, .canals .l-foto')];
-    const titols = [...document.querySelectorAll('#qui-titol, #lot-titol, #canals-titol, #segell-titol, #faq-titol')];
+  function scrub() {
+    if (quiet()) return;
+    const fotos = [...document.querySelectorAll(FOTOS)];
+    const titols = [...document.querySelectorAll(TITOLS)];
+    if (!fotos.length && !titols.length) return;
+    titols.forEach(partLinies);
 
-    titols.forEach((h) => {
-      // Només els espais normals: el no separable («5 kg») manté les dues parts juntes.
-      const parts = h.textContent.split(/([ \t\n\r]+)/);
-      h.textContent = '';
-      parts.forEach((w) => {
-        if (!w) return;
-        if (/^[ \t\n\r]+$/.test(w)) { h.appendChild(document.createTextNode(w)); return; }
-        const caixa = document.createElement('span');
-        caixa.className = 'mv-linia';
-        const s = document.createElement('span');
-        s.textContent = w;
-        caixa.appendChild(s);
-        h.appendChild(caixa);
-      });
-    });
-    // Cada paraula sap a quina línia és (--l): les de la mateixa línia pugen alhora.
+    // Cada paraula sap a quina línia és; les de la mateixa línia pugen alhora.
+    const linies = new Map();
     const numera = () => titols.forEach((h) => {
+      const grups = [];
       let dalt = null;
-      let l = -1;
       h.querySelectorAll('.mv-linia').forEach((c) => {
-        if (c.offsetTop !== dalt) { dalt = c.offsetTop; l++; }
-        c.firstChild.style.setProperty('--l', l);
+        if (c.offsetTop !== dalt) { dalt = c.offsetTop; grups.push([]); }
+        grups[grups.length - 1].push(c.firstChild);
       });
+      linies.set(h, grups);
     });
     numera();
-    if (document.fonts && document.fonts.ready) document.fonts.ready.then(numera);
-    addEventListener('resize', numera, { passive: true });
 
-    const vigila = [...new Set([...fotos, ...titols])];
     fotos.forEach((f) => f.classList.add('mv-foto'));
     titols.forEach((h) => h.classList.add('mv-titol'));
-    const obs = new IntersectionObserver((entrades2) => entrades2.forEach((e) => {
-      // Si és a la pantalla, entra; si ja ha quedat a dalt (s'hi ha saltat per sobre amb un enllaç), queda vist i quiet.
-      if (!e.isIntersecting && e.boundingClientRect.bottom > 0) return;
-      e.target.classList.add('mv-dins');
-      obs.unobserve(e.target);
-    }), { threshold: 0.3 });
-    vigila.forEach((el) => obs.observe(el));
+
+    let pendent = false;
+    const pinta = () => {
+      pendent = false;
+      const alt = innerHeight;
+      fotos.forEach((f) => {
+        const top = f.getBoundingClientRect().top;
+        f.style.setProperty('--p', clamp01((alt - top) / (alt * (1 - FI_FOTO))).toFixed(4));
+      });
+      titols.forEach((h) => {
+        const top = h.getBoundingClientRect().top;
+        const p = clamp01((alt - top) / (alt * (1 - FI_TITOL)));
+        const grups = linies.get(h) || [];
+        const n = grups.length;
+        // Les línies es reparteixen el recorregut: l'última acaba just quan p = 1
+        const tram = 1 / (1 + RETARD_LINIA * Math.max(0, n - 1));
+        grups.forEach((g, l) => {
+          const q = clamp01((p - l * RETARD_LINIA * tram) / tram).toFixed(4);
+          g.forEach((s) => s.style.setProperty('--q', q));
+        });
+      });
+    };
+    const demana = () => { if (!pendent) { pendent = true; requestAnimationFrame(pinta); } };
+    pinta();
+    addEventListener('scroll', demana, { passive: true });
+    addEventListener('resize', () => { numera(); demana(); }, { passive: true });
+    if (document.fonts && document.fonts.ready) document.fonts.ready.then(() => { numera(); demana(); });
+  }
+  scrub();
+
+  /* ---------- K · La resta d'elements entren un sol cop (en Lluc, 07/11/2026) ----------
+     Pugen 18 px i es fonen quan entren a la pantalla, sense rebot. Els que entren alhora ho fan un darrere l'altre
+     (T.entrada ms). Si un element ja és a dalt (s'hi ha saltat amb un enllaç o s'ha recarregat a mitja pàgina), queda
+     vist i quiet. El hero, la capçalera i la franja no es mouen. Amb moviment reduït o sense IntersectionObserver no
+     es marca res: tot queda visible. */
+  const ENTREN = [
+    '.qs-text > p',
+    '.l-cap', '.l-llista > li', '.l-nota', '.l-caixa', '.l-info > div',
+    '.segell ul > li',
+    '.faq details', '.faq-final',
+    '.peu > *',
+  ].join(', ');
+
+  function entrades() {
+    if (quiet() || !('IntersectionObserver' in window)) return;
+    const els = [...document.querySelectorAll(ENTREN)];
+    els.forEach((e) => e.classList.add('mv-apareix'));
+    const obs = new IntersectionObserver((llista) => {
+      let k = 0;
+      llista
+        .filter((e) => e.isIntersecting || e.boundingClientRect.bottom <= 0)
+        .sort((a, b) => (a.target.compareDocumentPosition(b.target) & Node.DOCUMENT_POSITION_FOLLOWING ? -1 : 1))
+        .forEach((e) => {
+          const ja = !e.isIntersecting; // ja és a dalt: es mostra sense moviment
+          e.target.style.setProperty('--d', ja ? 0 : Math.min(k++, 8));
+          if (ja) e.target.classList.add('mv-quiet');
+          e.target.classList.add('mv-dins');
+          obs.unobserve(e.target);
+        });
+    }, { rootMargin: '0px 0px -6% 0px' });
+    els.forEach((e) => obs.observe(e));
   }
   entrades();
 
-  window.Moviment = { text, html, tanda, teus, silenci, confirmacio, tempo };
+  window.Moviment = { text, html, tanda, teus, silenci, tempo, balanca, CORBA };
 })();
