@@ -67,7 +67,7 @@ h1,h2,h3{font-family:var(--f-titol);letter-spacing:var(--track);text-wrap:balanc
 
 /* ---------- Capçalera ---------- */
 .cap{position:absolute;inset:0 0 auto;z-index:5;display:flex;align-items:center;justify-content:space-between;padding:12px var(--x)}
-.cap img{width:52px;height:52px}
+.cap img{width:64px;height:64px}
 .cap .boto{padding:.45rem 1rem;font-size:.94rem}
 
 /* ---------- Hero: la foto ocupa tota la pantalla en entrar (100svh) i la franja queda a sota ---------- */
@@ -172,6 +172,7 @@ h2{font-weight:var(--pes-titol);font-size:var(--t-h2);line-height:1.08;margin:0}
 .peu p{margin:0 0 .4rem}
 .peu a{color:var(--sobre-fosc)}
 .peu strong{display:block;margin-bottom:.4rem;color:var(--sobre-fosc);font:var(--pes-titol) 1.25rem/1.1 var(--f-titol);letter-spacing:var(--track)}
+.peu-logo{display:block;width:88px;height:88px}
 .peu-lema{font:italic var(--pes-sub) 1.15rem/1.3 var(--f-titol);color:var(--sobre-fosc)}
 .peu-legal{grid-column:1/-1;display:flex;flex-wrap:wrap;gap:.4rem 1.6rem;padding-top:20px;border-top:1px solid rgba(255,255,255,.22);font-size:.92rem}
 
@@ -186,7 +187,7 @@ h2{font-weight:var(--pes-titol);font-size:var(--t-h2);line-height:1.08;margin:0}
    46rem centrada) */
 body.pagina{--x-pag:calc(max(0px,(100% - 46rem) / 2) + var(--marge-x));display:flex;flex-direction:column;min-height:100vh;min-height:100svh}
 .pagina-cap{padding:12px var(--x-pag);background:var(--fosc)}
-.pagina-cap img{width:44px;height:44px}
+.pagina-cap img{width:52px;height:52px}
 .pagina-cos{flex:1 0 auto;width:100%;max-width:46rem;margin-inline:auto;padding:var(--seccio-y) var(--marge-x)}
 .pagina-cos>*{margin-block:0}
 .pagina-cos>*+*{margin-top:1rem}
@@ -306,7 +307,7 @@ body.full-obert .full{transform:none;visibility:visible;transition:transform .32
   .peu-simple{padding-bottom:24px}
 }
 @media (max-width:600px){
-  .cap img{width:44px;height:44px}
+  .cap img{width:52px;height:52px}
   .franja .barra{width:150px}
   .segell ul{grid-template-columns:minmax(0,1fr)}
   .full{top:auto;left:0;right:0;bottom:0;width:100%;max-height:82svh;border-radius:14px 14px 0 0;transform:translateY(100%);padding-bottom:env(safe-area-inset-bottom)}

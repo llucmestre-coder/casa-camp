@@ -13,6 +13,8 @@ PRIMER-CONTACTE.md
 prompt*.md
 prompts/
 assets/recerca/
+# Originals del logo (la web fa servir les còpies retallades de assets/logo-*.webp)
+assets/logo/
 PLA-eines/
 
 # Secrets i entorn local

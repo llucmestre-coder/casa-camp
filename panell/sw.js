@@ -3,16 +3,16 @@
    2. Obre el panell (a la comanda o tanda que toqui) quan es toca una notificació.
    Les notificacions les mostra la pàgina amb `registration.showNotification` (maqueta, sense servidor). A la versió
    real serien Web Push, i aquí hi aniria el gestor `push`.
-   PENDENT: les icones són provisionals (logo actual); en canviar-les, pujar VERSIO perquè es tornin a desar. */
+   Icones amb el logo de Casa Camp (06/11/2026); si es tornen a canviar, pujar VERSIO perquè es tornin a desar. */
 'use strict';
 
-const VERSIO = 'casa-camp-panell-v2';
+const VERSIO = 'casa-camp-panell-v3';
 const FITXERS = [
   './', './index.html', './moduls.js', './moduls-comu.js', './moduls-diners.js', './moduls-logistica.js', './moduls-clients.js', './pwa.js', './manifest.webmanifest',
   './icones/icona-192.png', './icones/icona-512.png', './icones/icona-maskable-512.png',
   '../css/styles.css', '../css/panell.css',
   '../js/dades.js', '../js/magatzem.js', '../js/comu.js', '../js/panell.js',
-  '../assets/logo.png', '../assets/favicon.ico', '../assets/favicon-32.png', '../assets/apple-touch-icon.png',
+  '../assets/logo-blanc.webp', '../assets/logo-verd.webp', '../assets/favicon.ico', '../assets/favicon-32.png', '../assets/apple-touch-icon.png',
   '../assets/fonts/schibsted-grotesk-latin.woff2', '../assets/fonts/schibsted-grotesk-latin-ext.woff2',
 ];
 
