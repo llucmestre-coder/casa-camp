@@ -1,4 +1,4 @@
-/* ECO Cassovall — configuració editable en un sol lloc.
+/* Casa Camp — configuració editable en un sol lloc.
    Tot el que pot canviar el pastor (o en Lluc) és aquí: lot, peces, preus, tandes, enviament, correus i la llavor
    d'exemple. Sense build: al navegador crea `window.CassovallDades`; a Node, `module.exports`.
    Les xifres marcades «mostra» són de mostra evident (`000 €`, `00 €`) fins que el pastor en digui de reals. */

@@ -1,4 +1,4 @@
-/* ECO Cassovall — estat compartit i regles (tandes, comandes, correus, esdeveniments, mòduls, subscripció preparada).
+/* Casa Camp — estat compartit i regles (tandes, comandes, correus, esdeveniments, mòduls, subscripció preparada).
    Sense interfície. Un únic estat a `localStorage['cassovall:v2']`, amb versió (l'estat de la v1 es migra sol, sense
    tocar-lo); si l'emmagatzematge falla, es treballa en memòria. Al navegador (després de dades.js) crea `window.CassovallMagatzem`; a Node,
    `require('./magatzem.js').crearMagatzem({...})`. Els correus guarden plantilla + dades, mai el text final. */
