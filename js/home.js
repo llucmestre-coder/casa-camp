@@ -119,12 +119,44 @@
     if (location.hash === '#faq-tandes') pTandes.open = true;
   }
 
-  // La barra del mòbil surt quan el hero ja no és a la pantalla
+  // Els botons «Demana» de la capçalera, el hero i la barra del mòbil porten a la fitxa del lot (en Lluc, 07/11/2026).
+  // Sense JS és un enllaç normal a #lot; amb JS el salt és suau (si no hi ha moviment reduït) i el focus va al títol.
+  const lotTitol = el('lot-titol');
+  if (lotTitol) {
+    lotTitol.tabIndex = -1;
+    $$('a.boto[href="#lot"]').forEach((a) => a.addEventListener('click', (e) => {
+      e.preventDefault();
+      const suau = !matchMedia('(prefers-reduced-motion: reduce)').matches;
+      document.getElementById('lot').scrollIntoView({ behavior: suau ? 'smooth' : 'auto' });
+      lotTitol.focus({ preventScroll: true });
+      history.replaceState(null, '', '#lot');
+    }));
+  }
+
+  // La capçalera és fixa: transparent sobre el hero i verd fosc quan el hero ja ha passat per sota seu.
+  const capca = document.querySelector('.cap');
+  const heroCap = document.querySelector('.hero');
+  if (capca && heroCap) {
+    let pendent = false;
+    const mira = () => {
+      pendent = false;
+      capca.classList.toggle('solida', heroCap.getBoundingClientRect().bottom <= capca.offsetHeight);
+    };
+    addEventListener('scroll', () => { if (!pendent) { pendent = true; requestAnimationFrame(mira); } }, { passive: true });
+    addEventListener('resize', mira, { passive: true });
+    mira();
+  }
+
+  // La barra del mòbil surt quan el hero ja no és a la pantalla, i s'amaga mentre s'és a les fitxes de compra:
+  // el seu botó porta al lot (en Lluc, 07/11/2026), i allà ja hi ha el botó de la fitxa.
   const bm = el('demana-mobil');
-  const hero = document.querySelector('.hero');
-  if (bm && hero && 'IntersectionObserver' in window) {
-    new IntersectionObserver((entrades) => {
-      bm.classList.toggle('visible', !entrades[0].isIntersecting);
-    }).observe(hero);
+  const zones = ['.hero', '#lot', '#canals'].map((s) => document.querySelector(s)).filter(Boolean);
+  if (bm && zones.length && 'IntersectionObserver' in window) {
+    const dins = new Set();
+    const obs = new IntersectionObserver((entrades) => {
+      entrades.forEach((e) => (e.isIntersecting ? dins.add(e.target) : dins.delete(e.target)));
+      bm.classList.toggle('visible', dins.size === 0);
+    });
+    zones.forEach((z) => obs.observe(z));
   }
 })();

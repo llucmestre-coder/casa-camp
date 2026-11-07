@@ -82,8 +82,13 @@ h1,h2,h3{font-family:var(--f-titol);letter-spacing:var(--track);text-wrap:balanc
 .franja .barra{--b-ple:var(--sobre-fosc);--b-pista:rgba(255,255,255,.28);width:200px;flex:none}
 
 /* ---------- Capçalera ---------- */
-.cap{position:absolute;inset:0 0 auto;z-index:5;display:flex;align-items:center;justify-content:space-between;padding:12px var(--x)}
-.cap img{width:64px;height:64px}
+/* Capçalera fixa (en Lluc, 07/11/2026): sobre el hero és transparent; en sortir-ne pren el verd fosc i s'aprima
+   (classe .solida, la posa js/home.js). Les seccions amb ancoratge deixen lloc a sota (scroll-margin-top). */
+.cap{position:fixed;inset:0 0 auto;z-index:16;display:flex;align-items:center;justify-content:space-between;padding:12px var(--x);transition:background-color .25s ease,padding .25s ease,box-shadow .25s ease}
+.cap img{width:64px;height:64px;transition:width .25s ease,height .25s ease}
+.cap.solida{padding-block:6px;background:var(--fosc);box-shadow:0 2px 12px rgba(15,31,23,.18)}
+.cap.solida img{width:44px;height:44px}
+section[id],[id^="faq-"]{scroll-margin-top:72px}
 .cap .boto{padding:.45rem 1rem;font-size:.94rem}
 
 /* ---------- Hero: la foto ocupa tota la pantalla en entrar (100svh) i la franja queda a sota ---------- */
@@ -277,7 +282,7 @@ body.full-obert .full{transform:none;visibility:visible;transition:transform .32
 }
 
 @media (prefers-reduced-motion:reduce){
-  .full,.vel,.demana-mobil,.camp label,.boto,.boto-sec,.boto-lleu,.tanca,.faq summary{transition:none}
+  .cap,.cap img,.full,.vel,.demana-mobil,.camp label,.boto,.boto-sec,.boto-lleu,.tanca,.faq summary{transition:none}
 }
 
 /* Interruptor «Vista mòbil» de la web (js/vista-mobil.js; només amb ?presentacio i a ≥ 861 px): la web dins d'un marc
@@ -300,10 +305,29 @@ body.full-obert .full{transform:none;visibility:visible;transition:transform .32
 @media (max-width:860px){
   .hero::after{background:linear-gradient(180deg,rgba(15,31,23,.5) 0,rgba(15,31,23,.64) 14%,rgba(15,31,23,.72) 100%)}
   .qui{grid-template-columns:minmax(0,1fr);grid-template-areas:"titol" "text" "foto"}
-  .lot-graella{grid-template-columns:minmax(0,1fr);grid-template-areas:"foto" "cap" "caixa" "peces" "info";grid-template-rows:none}
-  .l-info{grid-template-columns:minmax(0,1fr);gap:.9rem}
-  .l-foto{min-height:0}
-  .l-foto img{position:static;aspect-ratio:4/3;height:auto}
+  /* Fitxes del lot i de les canals al mòbil (en Lluc, 07/11/2026): foto a l'esquerra i peces a la dreta, tot més
+     compacte perquè no calgui tant scroll. Abans: foto a tota l'amplada i 1.367 px de secció. */
+  .lot,.canals{padding-block:32px}
+  .lot-graella{grid-template-columns:minmax(0,2fr) minmax(0,3fr);grid-template-areas:"cap cap" "foto peces" "caixa caixa" "info info";grid-template-rows:none;gap:.8rem 14px}
+  .l-cap p{margin-top:.3rem;font-size:.94rem}
+  .l-foto{min-height:150px}
+  .l-llista li{padding:.36rem 0;font-size:.9rem}
+  .l-nota{margin-top:.4rem;font-size:.8rem}
+  .l-caixa{padding:14px}
+  .l-preu strong{font-size:2rem}
+  .l-compra{margin-top:.8rem}
+  .lot .l-compra{flex-direction:row;align-items:center}
+  .lot .l-quant{flex:none}
+  .l-quant button{width:40px;height:40px}
+  .l-quant output{min-width:3.4rem}
+  .lot .l-compra .boto{flex:1;min-height:48px;padding-inline:.8rem}
+  .l-tanda{margin-top:.8rem}
+  .l-enllac{margin-top:.35rem}
+  .l-info{grid-template-columns:minmax(0,1fr);gap:0;margin:0}
+  .l-info div{display:grid;grid-template-columns:6.4rem minmax(0,1fr);gap:.6rem;padding:.45rem 0;border-top:1px solid var(--linia)}
+  .l-info div:first-child{border-top:2px solid var(--text)}
+  .l-info dt{font-size:.9rem}
+  .l-info dd{margin:0;font-size:.88rem}
   .segell,.peu{grid-template-columns:minmax(0,1fr)}
   .demana-mobil{display:flex}
   .peu{padding-bottom:88px}
@@ -311,6 +335,9 @@ body.full-obert .full{transform:none;visibility:visible;transition:transform .32
 }
 @media (max-width:600px){
   .cap img{width:52px;height:52px}
+  .cap.solida img{width:40px;height:40px}
+  .lot .l-compra{gap:.45rem}
+  .lot .l-compra .boto{font-size:.94rem;padding-inline:.6rem}
   .franja .barra{width:150px}
   .segell ul{grid-template-columns:minmax(0,1fr)}
   .full{top:auto;left:0;right:0;bottom:0;width:100%;max-height:82svh;border-radius:14px 14px 0 0;transform:translateY(100%);padding-bottom:env(safe-area-inset-bottom)}

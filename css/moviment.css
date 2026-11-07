@@ -1,6 +1,6 @@
 /* Casa Camp — moviment (criteri general del 04/11/2026, CLAUDE.md §«Criteri general de moviment»).
    Aquí hi ha tot l'estil del moviment; la part que cal calcular és a js/moviment.js.
-   Regles (07/11/2026): fotos i títols lligats a l'scroll; la resta d'elements entren un sol cop; cap rebot; tot alhora;
+   Regles (07/11/2026): fotos, títols i la resta d'elements entren un sol cop, curt i suau; cap rebot; tot alhora;
    un sol tempo; amb prefers-reduced-motion no es mou res. */
 
 :root{
@@ -57,23 +57,20 @@ body.full-obert .full{transition:transform calc(.32s * var(--tempo)) var(--corba
   transition:transform calc(320ms * var(--tempo)) var(--corba),background-size calc(320ms * var(--tempo)) var(--corba)}
 .faq details[open]:not(.mv-tanca) summary::after{transform:rotate(180deg);background-size:.55em 2px,2px 0}
 
-/* ---------- I · Fotos i J · títols, lligats a l'scroll (en Lluc, 07/11/2026) ----------
-   El JS (js/moviment.js) hi posa el progrés: --p a la foto i --q a cada línia del títol (0 = amagat, 1 = al seu lloc).
-   Avancen i reculen amb la roda. La transició curta només suavitza els salts de la roda del ratolí.
-   Només si el JS ha posat .mv-foto / .mv-titol: sense JS, tot és visible. */
-.mv-foto{overflow:hidden}
-.mv-foto img{clip-path:inset(calc((1 - var(--p,0)) * 100%) 0 0 0);transform:scale(calc(1 + (1 - var(--p,0)) * .1));transition:clip-path calc(140ms * var(--tempo)) linear,transform calc(140ms * var(--tempo)) linear}
+/* ---------- I · Fotos, J · títols i K · la resta: entren un sol cop, curt i suau (en Lluc, 07/11/2026) ----------
+   Substitueix les fotos i els títols lligats a l'scroll. Només si el JS ha posat les classes: sense JS, tot és visible.
+   .mv-dins = ja ha entrat; .mv-quiet = ja era a dalt (sense moviment); --d = ordre dels que entren alhora. */
+.mv-foto img{opacity:0;transform:scale(1.03)}
+.mv-foto.mv-dins img{opacity:1;transform:none;transition:opacity calc(450ms * var(--tempo)) var(--corba),transform calc(600ms * var(--tempo)) var(--corba)}
 .mv-linia{display:inline-block;overflow:hidden;vertical-align:top;padding:.12em 0 .1em;margin:-.12em 0 -.1em}
-.mv-titol .mv-linia>span{display:inline-block;transform:translateY(calc((1 - var(--q,0)) * 110%));transition:transform calc(140ms * var(--tempo)) linear}
-
-/* ---------- K · La resta d'elements entren un sol cop (07/11/2026) ----------
-   Pugen 18 px i es fonen, sense rebot; --d és l'ordre dins dels que entren alhora. .mv-quiet = ja era a dalt. */
-.mv-apareix{opacity:0;transform:translateY(18px)}
-.mv-apareix.mv-dins{opacity:1;transform:none;transition:opacity calc(600ms * var(--tempo)) var(--corba),transform calc(700ms * var(--tempo)) var(--corba);transition-delay:calc(var(--d,0) * 70ms * var(--tempo))}
-.mv-apareix.mv-quiet{transition:none}
+.mv-titol .mv-linia>span{display:inline-block;transform:translateY(105%)}
+.mv-titol.mv-dins .mv-linia>span{transform:none;transition:transform calc(450ms * var(--tempo)) var(--corba);transition-delay:calc(var(--l,0) * 50ms * var(--tempo))}
+.mv-apareix{opacity:0;transform:translateY(10px)}
+.mv-apareix.mv-dins{opacity:1;transform:none;transition:opacity calc(400ms * var(--tempo)) var(--corba),transform calc(400ms * var(--tempo)) var(--corba);transition-delay:calc(var(--d,0) * 40ms * var(--tempo))}
+.mv-quiet,.mv-quiet img,.mv-quiet .mv-linia>span{transition:none!important}
 
 /* ---------- Moviment reduït: res es mou ---------- */
 @media (prefers-reduced-motion:reduce){
   *,*::before,*::after{animation:none!important;transition:none!important}
-  .mv-foto img,.mv-linia>span,.mv-apareix{clip-path:none!important;transform:none!important;opacity:1!important}
+  .mv-foto img,.mv-linia>span,.mv-apareix{transform:none!important;opacity:1!important}
 }
