@@ -10,10 +10,11 @@
 
 /* ---------- Tokens ---------- */
 :root{
-  --fons:#EEEFEA; --superficie:#FFFFFF; --bloc:#FFFFFF; --text:#2C3A42; --text-2:#4E5D66;
-  --fosc:#2C3A42; --sobre-fosc:#FFFFFF; --sobre-fosc-2:#D5DBDD;
-  --cta:#7A2A23; --cta-fosc:#5E1F1A; --sobre-cta:#FFFFFF; --accent:#7A2A23; --tria:#F1E4E2;
-  --linia:#C3C9C6; --vora:#7F898E; --suau:#DDE0DC;
+  /* Paleta «Bosc» (07/11/2026, PLA.md §«Paleta Bosc»): el verd del logo fa d'accent; el granat es queda al botó */
+  --fons:#EDEFE8; --superficie:#FFFFFF; --bloc:#FFFFFF; --text:#243027; --text-2:#4C5A4F;
+  --fosc:#27332A; --sobre-fosc:#FFFFFF; --sobre-fosc-2:#D2DAD0;
+  --cta:#7A2A23; --cta-fosc:#5E1F1A; --sobre-cta:#FFFFFF; --accent:#677B62; --tria:#F1E4E2;
+  --linia:#C4CBC0; --vora:#7D877A; --suau:#DCE2D7;
 
   --f-titol:"Schibsted Grotesk",system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
   --f-cos:"Schibsted Grotesk",system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
@@ -25,7 +26,7 @@
   /* Marge lateral de totes les seccions: el de sempre i, a pantalles amples, el que centra 1320 px de contingut.
      Així totes les seccions comencen al mateix punt (el 100% es resol a cada element: l'amplada de la pàgina). */
   --x:max(var(--marge-x),calc((100% - var(--amplada-max)) / 2));
-  --vel:rgba(15,22,28,.5);
+  --vel:rgba(16,24,18,.5);
 }
 
 /* ---------- Base ---------- */
@@ -37,6 +38,7 @@ img{max-width:100%;height:auto;display:block}
 a{color:inherit}
 h1,h2,h3{font-family:var(--f-titol);letter-spacing:var(--track);text-wrap:balance}
 :focus-visible{outline:3px solid var(--accent);outline-offset:3px}
+.cap :focus-visible,.hero :focus-visible,.franja :focus-visible,.peu :focus-visible,.pagina-cap :focus-visible,.demana-mobil :focus-visible{outline-color:var(--sobre-fosc)}
 .sr-nomes{position:absolute;width:1px;height:1px;margin:-1px;padding:0;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap;border:0}
 
 /* ---------- Botons ---------- */
@@ -61,7 +63,7 @@ h1,h2,h3{font-family:var(--f-titol);letter-spacing:var(--track);text-wrap:balanc
 @media (hover:hover){.enllac-boto:hover{color:var(--cta-fosc)}}
 
 /* ---------- Barra de la tanda (simple: part plena de llosa sobre una pista de pedra) ---------- */
-.barra{--b-ple:var(--fosc);--b-pista:var(--linia);position:relative;height:10px;border-radius:999px;background:var(--b-pista);overflow:hidden}
+.barra{--b-ple:var(--accent);--b-pista:var(--linia);position:relative;height:10px;border-radius:999px;background:var(--b-pista);overflow:hidden}
 .barra>i{display:block;height:100%;width:0;border-radius:inherit;background:var(--b-ple)}
 .franja .barra{--b-ple:var(--sobre-fosc);--b-pista:rgba(255,255,255,.28);width:200px;flex:none}
 
@@ -75,7 +77,7 @@ h1,h2,h3{font-family:var(--f-titol);letter-spacing:var(--track);text-wrap:balanc
 .hero picture{display:contents}
 .hero-foto{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;object-position:50% 52%}
 /* vel calculat amb el pitjor cas, una foto blanca (§4): ≥ .66 de negre fins al 46 % de l'amplada */
-.hero::after{content:"";position:absolute;inset:0;pointer-events:none;background:linear-gradient(90deg,rgba(15,22,28,.82) 0,rgba(15,22,28,.66) 46%,rgba(15,22,28,.18) 78%,rgba(15,22,28,.05) 100%),linear-gradient(180deg,rgba(15,22,28,.35) 0,rgba(15,22,28,0) 25%)}
+.hero::after{content:"";position:absolute;inset:0;pointer-events:none;background:linear-gradient(90deg,rgba(16,24,18,.82) 0,rgba(16,24,18,.66) 46%,rgba(16,24,18,.18) 78%,rgba(16,24,18,.05) 100%),linear-gradient(180deg,rgba(16,24,18,.35) 0,rgba(16,24,18,0) 25%)}
 .hero-text{position:relative;z-index:2;max-width:46rem;padding:92px var(--marge-x);margin-left:calc(var(--x) - var(--marge-x))}
 .hero h1{font-weight:var(--pes-titol);font-size:var(--t-hero);line-height:1.04;margin:0 0 .7rem;max-width:16ch}
 .hero p{font-size:clamp(1rem,1.2vw,1.125rem);max-width:32rem;margin:0 0 1.25rem}
@@ -295,7 +297,7 @@ body.full-obert .full{transform:none;visibility:visible;transition:transform .32
 
 /* ---------- Mòbil ---------- */
 @media (max-width:860px){
-  .hero::after{background:linear-gradient(180deg,rgba(15,22,28,.5) 0,rgba(15,22,28,.64) 14%,rgba(15,22,28,.72) 100%)}
+  .hero::after{background:linear-gradient(180deg,rgba(16,24,18,.5) 0,rgba(16,24,18,.64) 14%,rgba(16,24,18,.72) 100%)}
   .qui{grid-template-columns:minmax(0,1fr);grid-template-areas:"titol" "text" "foto"}
   .lot-graella{grid-template-columns:minmax(0,1fr);grid-template-areas:"foto" "cap" "caixa" "peces";grid-template-rows:none}
   .l-foto{min-height:0}

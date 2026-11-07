@@ -6,7 +6,7 @@
    Icones amb el logo de Casa Camp (06/11/2026); si es tornen a canviar, pujar VERSIO perquè es tornin a desar. */
 'use strict';
 
-const VERSIO = 'casa-camp-panell-v3';
+const VERSIO = 'casa-camp-panell-v4'; // v4: paleta «Bosc» (07/11/2026)
 const FITXERS = [
   './', './index.html', './moduls.js', './moduls-comu.js', './moduls-diners.js', './moduls-logistica.js', './moduls-clients.js', './pwa.js', './manifest.webmanifest',
   './icones/icona-192.png', './icones/icona-512.png', './icones/icona-maskable-512.png',

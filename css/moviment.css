@@ -61,7 +61,18 @@ body.full-obert .full{transition:transform calc(.32s * var(--tempo)) var(--corba
    El JS posa la vista nova al costat del formulari mentre dura el canvi; aquí només cal que el contenidor la talli. */
 #full-cos{position:relative}
 
+/* ---------- I · Fotos que es destapen · J · Títols per línies (en Lluc, 07/11/2026; PLA.md §«Paleta Bosc») ----------
+   Només si el JS ha posat .mv-foto / .mv-titol (no ho fa amb moviment reduït ni sense IntersectionObserver): sense JS,
+   tot és visible. Un sol cop: quan entren a la pantalla, el JS hi posa .mv-dins. */
+.mv-foto{overflow:hidden}
+.mv-foto img{clip-path:inset(100% 0 0 0);transform:scale(1.1)}
+.mv-foto.mv-dins img{clip-path:inset(0 0 0 0);transform:none;transition:clip-path calc(900ms * var(--tempo)) var(--corba),transform calc(1300ms * var(--tempo)) var(--corba)}
+.mv-linia{display:inline-block;overflow:hidden;vertical-align:top;padding:.12em 0 .1em;margin:-.12em 0 -.1em}
+.mv-linia>span{display:inline-block;transform:translateY(110%)}
+.mv-titol.mv-dins .mv-linia>span{transform:none;transition:transform calc(700ms * var(--tempo)) var(--corba);transition-delay:calc(var(--l,0) * 90ms * var(--tempo))}
+
 /* ---------- Moviment reduït: res es mou ---------- */
 @media (prefers-reduced-motion:reduce){
   *,*::before,*::after{animation:none!important;transition:none!important}
+  .mv-foto img,.mv-linia>span{clip-path:none!important;transform:none!important}
 }

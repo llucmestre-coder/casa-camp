@@ -1,7 +1,8 @@
 /* Casa Camp — moviment (criteri general del 04/11/2026, CLAUDE.md §«Criteri general de moviment»).
    Es carrega després de comu.js i abans de compra.js i home.js, que només hi fan les crides de `window.Moviment`.
    Idees: A trams de la tanda · B els teus lots · C mitja o sencera · D preguntes · E i F xifres del full ·
-          H confirmació. (Cap hero, capçalera, Qui som, segell ni peu. La barra del mòbil no té barra: es queda.)
+          H confirmació · I fotos que es destapen · J títols per línies (07/11/2026: canvia la regla «cap aparició en
+          fer scroll»). Quiets: hero (en Lluc hi passarà una inspiració), capçalera, paràgrafs i peu.
    Tempo: la variable CSS --tempo (css/moviment.css) multiplica totes les durades d'aquí. */
 (function () {
   'use strict';
@@ -291,6 +292,55 @@
       alFinal();
     };
   }
+
+  /* ---------- I · Fotos que es destapen · J · Títols per línies (07/11/2026) ---------- */
+  // Un sol cop per visita, quan entren a la pantalla. L'estil és a moviment.css; aquí només es marquen i es vigilen.
+  // Amb moviment reduït o sense IntersectionObserver no es marca res: tot queda visible.
+  function entrades() {
+    if (quiet() || !('IntersectionObserver' in window)) return;
+    const fotos = [...document.querySelectorAll('.qs-foto, .lot .l-foto, .canals .l-foto')];
+    const titols = [...document.querySelectorAll('#qui-titol, #lot-titol, #canals-titol, #segell-titol, #faq-titol')];
+
+    titols.forEach((h) => {
+      // Només els espais normals: el no separable («5 kg») manté les dues parts juntes.
+      const parts = h.textContent.split(/([ \t\n\r]+)/);
+      h.textContent = '';
+      parts.forEach((w) => {
+        if (!w) return;
+        if (/^[ \t\n\r]+$/.test(w)) { h.appendChild(document.createTextNode(w)); return; }
+        const caixa = document.createElement('span');
+        caixa.className = 'mv-linia';
+        const s = document.createElement('span');
+        s.textContent = w;
+        caixa.appendChild(s);
+        h.appendChild(caixa);
+      });
+    });
+    // Cada paraula sap a quina línia és (--l): les de la mateixa línia pugen alhora.
+    const numera = () => titols.forEach((h) => {
+      let dalt = null;
+      let l = -1;
+      h.querySelectorAll('.mv-linia').forEach((c) => {
+        if (c.offsetTop !== dalt) { dalt = c.offsetTop; l++; }
+        c.firstChild.style.setProperty('--l', l);
+      });
+    });
+    numera();
+    if (document.fonts && document.fonts.ready) document.fonts.ready.then(numera);
+    addEventListener('resize', numera, { passive: true });
+
+    const vigila = [...new Set([...fotos, ...titols])];
+    fotos.forEach((f) => f.classList.add('mv-foto'));
+    titols.forEach((h) => h.classList.add('mv-titol'));
+    const obs = new IntersectionObserver((entrades2) => entrades2.forEach((e) => {
+      // Si és a la pantalla, entra; si ja ha quedat a dalt (s'hi ha saltat per sobre amb un enllaç), queda vist i quiet.
+      if (!e.isIntersecting && e.boundingClientRect.bottom > 0) return;
+      e.target.classList.add('mv-dins');
+      obs.unobserve(e.target);
+    }), { threshold: 0.3 });
+    vigila.forEach((el) => obs.observe(el));
+  }
+  entrades();
 
   window.Moviment = { text, html, tanda, teus, silenci, confirmacio, tempo };
 })();
