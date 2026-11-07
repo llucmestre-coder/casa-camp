@@ -17,13 +17,41 @@ body.app{--x-app:calc(max(0px,(100% - 960px) / 2) + var(--marge-x))}
 .app-titol{margin:0;font:var(--pes-titol) 1.2rem/1.1 var(--f-titol);letter-spacing:var(--track)}
 .app-nav{position:sticky;top:0;z-index:10;display:flex;gap:.4rem;overflow-x:auto;padding:8px var(--x-app);background:var(--fons);border-bottom:1px solid var(--linia);scrollbar-width:thin}
 .app-nav a{flex:none;display:inline-flex;align-items:center;min-height:44px;padding:.4rem 1rem;border-radius:999px;text-decoration:none;font-weight:700;color:var(--text)}
-@media (max-width:600px){
-  /* Mòbil: les sis seccions a la vista (3 × 2), sense haver de desplaçar la barra de costat */
-  .app-nav{display:grid;grid-template-columns:repeat(3,1fr);gap:.3rem;overflow:visible}
-  .app-nav a{justify-content:center;padding:.4rem .3rem;font-size:.94rem}
-}
 @media (hover:hover){.app-nav a:hover{background:var(--tria)}}
 .app-nav a[aria-current="page"]{background:var(--fosc);color:var(--sobre-fosc)}
+
+/* ---------- Mòbil: menú de tres barres + barra lateral, i accés ràpid a baix (en Lluc, 07/11/2026) ----------
+   Per sota de 700 px (el mateix llindar que la «Vista mòbil»). A l'escriptori, la navegació de sempre. */
+.menu-obre,.menu-cap,.menu-vel,.app-baix{display:none}
+@media (max-width:699px){
+  .menu-obre{display:inline-grid;place-items:center;width:44px;height:44px;margin-left:-8px;padding:0;border:0;border-radius:50%;background:transparent;color:var(--sobre-fosc);cursor:pointer}
+  .menu-obre:focus-visible{outline:3px solid var(--sobre-fosc);outline-offset:1px}
+  .app-cap{position:sticky;top:0;z-index:12;gap:.6rem}
+  .app-titol{font-size:1.05rem}
+  .app-logo img{width:36px;height:36px}
+  /* La barra lateral */
+  .app-nav{position:fixed;z-index:31;top:0;bottom:0;left:0;width:min(300px,84vw);display:flex;flex-direction:column;align-items:stretch;gap:.2rem;overflow-y:auto;padding:12px 12px calc(16px + env(safe-area-inset-bottom));border:0;background:var(--superficie);box-shadow:0 0 40px rgba(15,31,23,.25);transform:translateX(-105%);visibility:hidden;transition:transform calc(.28s * var(--tempo,1)) cubic-bezier(.2,.8,.2,1),visibility 0s calc(.28s * var(--tempo,1))}
+  body.menu-obert .app-nav{transform:none;visibility:visible;transition:transform calc(.28s * var(--tempo,1)) cubic-bezier(.2,.8,.2,1)}
+  .menu-cap{display:flex;align-items:center;justify-content:space-between;padding:4px 4px 10px 12px;margin-bottom:.3rem;border-bottom:1px solid var(--linia);font:var(--pes-sub) 1.05rem/1.2 var(--f-titol);letter-spacing:var(--track)}
+  .menu-tanca{display:inline-grid;place-items:center;width:44px;height:44px;padding:0;border:0;border-radius:50%;background:transparent;color:var(--text);cursor:pointer}
+  @media (hover:hover){.menu-tanca:hover{background:var(--tria)}}
+  .app-nav a{justify-content:flex-start;min-height:48px;padding:.5rem 14px;border-radius:12px;font-size:1rem}
+  .nav-moduls{display:flex;flex-direction:column;gap:.2rem;margin:.4rem 0;padding-top:.6rem;border-top:1px solid var(--linia)}
+  .nav-moduls::before{content:"Mòduls";padding:0 14px .2rem;color:var(--text-2);font-size:var(--t-petit);font-weight:600}
+  .menu-vel{display:block;position:fixed;inset:0;z-index:30;background:var(--vel);opacity:0;pointer-events:none;transition:opacity calc(.2s * var(--tempo,1))}
+  .menu-vel[hidden]{display:block}
+  body.menu-obert .menu-vel{opacity:1;pointer-events:auto}
+  body.menu-obert{overflow:hidden}
+  /* Accés ràpid: quatre seccions amb icona */
+  .app-baix{position:fixed;z-index:20;left:0;right:0;bottom:0;display:grid;grid-template-columns:repeat(4,1fr);padding:4px 6px calc(4px + env(safe-area-inset-bottom));background:var(--superficie);border-top:1px solid var(--linia)}
+  .app-baix a{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;min-height:56px;border-radius:12px;color:var(--text-2);font-size:.75rem;font-weight:600;text-decoration:none}
+  .app-baix a .roda{fill:var(--superficie)}
+  .app-baix a[aria-current="page"]{color:var(--fosc)}
+  .app-baix a[aria-current="page"] svg{padding:2px 14px;box-sizing:content-box;border-radius:999px;background:var(--tria)}
+  .app-baix a:focus-visible{outline:3px solid var(--accent);outline-offset:-3px}
+  body.app .app-vista{padding-bottom:calc(88px + env(safe-area-inset-bottom))}
+}
+@media (max-width:699px) and (prefers-reduced-motion:reduce){.app-nav,body.menu-obert .app-nav,.menu-vel{transition:none}}
 /* Interruptor «Vista mòbil» (només a pantalla ampla i fora del marc): mostra el panell en un marc de 390 px */
 .vista-mobil{display:none;margin-left:auto;align-items:center;gap:.6rem;min-height:44px;padding:.3rem .5rem .3rem .9rem;border:1.5px solid var(--sobre-fosc-2);border-radius:999px;background:transparent;color:var(--sobre-fosc);font:700 .94rem var(--f-cos);cursor:pointer}
 .vista-mobil::after{content:"";width:2.4rem;height:1.4rem;border-radius:999px;background:radial-gradient(circle at .7rem 50%,var(--fosc) 0 .45rem,transparent .5rem) var(--sobre-fosc-2)}
@@ -190,7 +218,7 @@ body.app{--x-app:calc(max(0px,(100% - 960px) / 2) + var(--marge-x))}
 /* ---------- Impressió (llistes del transport) ---------- */
 @media print{
   body.app{background:#fff}
-  .app-cap,.app-nav,.app-avis,.accions,.filtres .camp-pla,.enrere,.dialeg,.no-imprimeix,.seccio-modul{display:none}
+  .app-cap,.app-nav,.app-baix,.menu-vel,.app-avis,.accions,.filtres .camp-pla,.enrere,.dialeg,.no-imprimeix,.seccio-modul{display:none}
   .app-vista{max-width:none;padding:0}
   .targeta{padding:0;border-radius:0}
   .taula th,.taula td{border-bottom:1px solid #000}
@@ -199,11 +227,6 @@ body.app{--x-app:calc(max(0px,(100% - 960px) / 2) + var(--marge-x))}
 /* ---------- Mòduls: navegació, factura, etiquetes, ruta, kg, comanda per telèfon ---------- */
 /* Les vistes dels mòduls van en una fila a part: a escriptori, dins la mateixa línia; a mòbil, una línia que es desplaça */
 .nav-moduls{display:contents}
-@media (max-width:600px){
-  .app-nav{position:static}
-  .nav-moduls{grid-column:1/-1;order:10;display:grid;grid-template-columns:repeat(3,1fr);gap:.3rem}
-  .nav-moduls a{justify-content:center;padding:.4rem .3rem;font-size:.94rem}
-}
 .filtre-parell a.boto[aria-pressed="true"]{background:var(--fosc);color:var(--sobre-fosc);box-shadow:none}
 .app-vista h4{margin:1rem 0 .5rem;font:var(--pes-sub) 1rem/1.25 var(--f-titol)}
 .fila-ruta{flex-wrap:wrap}

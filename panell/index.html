@@ -28,12 +28,16 @@
 
 <div class="app-marc" id="app" hidden>
   <header class="app-cap">
+    <!-- Menú de tres barres (només al mòbil): obre la barra lateral amb totes les seccions (en Lluc, 07/11/2026) -->
+    <button type="button" class="menu-obre" id="menu-obre" aria-label="Obre el menú" aria-expanded="false" aria-controls="app-nav"><svg viewBox="0 0 24 24" width="24" height="24" aria-hidden="true" focusable="false"><path d="M4 7h16M4 12h16M4 17h16" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg></button>
     <a href="../" class="app-logo" id="app-logo"><img src="../assets/logo-blanc.webp" alt="Casa Camp" width="208" height="208"></a>
     <p class="app-titol">Panell de comandes</p>
     <button type="button" class="simulador-boto" id="simulador" hidden>Simulador</button>
     <button type="button" class="vista-mobil" id="vista-mobil" role="switch" aria-checked="false">Vista mòbil</button>
   </header>
-  <nav class="app-nav" aria-label="Seccions del panell">
+  <div class="menu-vel" id="menu-vel" hidden></div>
+  <nav class="app-nav" id="app-nav" aria-label="Seccions del panell">
+    <div class="menu-cap"><span>Seccions</span><button type="button" class="menu-tanca" id="menu-tanca" aria-label="Tanca el menú"><svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true" focusable="false"><path d="M6 6l12 12M18 6L6 18" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg></button></div>
     <a href="#avui" data-vista="avui">Avui</a>
     <a href="#tandes" data-vista="tandes">Tandes</a>
     <a href="#comandes" data-vista="comandes">Comandes</a>
@@ -44,6 +48,13 @@
   <div class="app-avis" id="app-avis" hidden></div>
   <main class="app-vista" id="vista" tabindex="-1"></main>
   <div class="marc-mobil" id="marc-mobil"></div>
+  <!-- Accés ràpid (només al mòbil): les quatre seccions del dia a dia, amb icona -->
+  <nav class="app-baix" aria-label="Accés ràpid">
+    <a href="#avui" data-vista="avui"><svg viewBox="0 0 24 24" width="24" height="24" aria-hidden="true" focusable="false"><rect x="3.5" y="5" width="17" height="15" rx="2.5" fill="none" stroke="currentColor" stroke-width="1.8"/><path d="M3.5 10h17M8 3v4M16 3v4" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/><circle cx="12" cy="15" r="1.8" fill="currentColor"/></svg><span>Avui</span></a>
+    <a href="#tandes" data-vista="tandes"><svg viewBox="0 0 24 24" width="24" height="24" aria-hidden="true" focusable="false"><rect x="3" y="9" width="4" height="6" rx="1" fill="currentColor"/><rect x="10" y="9" width="4" height="6" rx="1" fill="currentColor"/><rect x="17" y="9" width="4" height="6" rx="1" fill="none" stroke="currentColor" stroke-width="1.6"/></svg><span>Tandes</span></a>
+    <a href="#comandes" data-vista="comandes"><svg viewBox="0 0 24 24" width="24" height="24" aria-hidden="true" focusable="false"><path d="M6 3.5h12v17l-2-1.4-2 1.4-2-1.4-2 1.4-2-1.4-2 1.4z" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/><path d="M9 8.5h6M9 12h6" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg><span>Comandes</span></a>
+    <a href="#transport" data-vista="transport"><svg viewBox="0 0 24 24" width="24" height="24" aria-hidden="true" focusable="false"><path d="M2.5 6.5h11v9h-11zM13.5 10h4l3 3v2.5h-7z" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/><circle cx="6.5" cy="17.5" r="1.8" class="roda" stroke="currentColor" stroke-width="1.8"/><circle cx="17" cy="17.5" r="1.8" class="roda" stroke="currentColor" stroke-width="1.8"/></svg><span>Transport</span></a>
+  </nav>
 </div>
 
 <dialog class="dialeg" id="dialeg" aria-labelledby="dialeg-titol"></dialog>

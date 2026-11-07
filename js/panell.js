@@ -157,7 +157,52 @@
     if (PWA) window.addEventListener('pwa-canvi', () => { if (['instalar', 'configuracio'].includes(ruta().vista)) pinta(); });
     iniciaSimulador();
     iniciaVistaMobil();
+    iniciaMenu();
     pinta();
+  }
+
+  /* ---------- Menú de tres barres (mòbil, < 700 px; en Lluc, 07/11/2026) ----------
+     Obre la barra lateral amb totes les seccions. Es tanca en triar-ne una, amb Esc o tocant fora. Tancada al mòbil, la
+     barra és inert (el teclat no hi entra); a l'escriptori la navegació és la de sempre i no es toca. */
+  const mobil = window.matchMedia('(max-width: 699px)');
+  function posaMenu(obert, { focus = true } = {}) {
+    const nav = $('.app-nav');
+    const boto = id('menu-obre');
+    document.body.classList.toggle('menu-obert', obert);
+    boto.setAttribute('aria-expanded', String(obert));
+    nav.inert = mobil.matches && !obert;
+    if (obert) {
+      nav.setAttribute('role', 'dialog');
+      nav.setAttribute('aria-modal', 'true');
+      if (focus) {
+        const actual = $('a[aria-current="page"]', nav) || $('a', nav);
+        setTimeout(() => actual && actual.focus(), 30);
+      }
+    } else {
+      nav.removeAttribute('role');
+      nav.removeAttribute('aria-modal');
+      if (focus && mobil.matches) boto.focus();
+    }
+  }
+  function iniciaMenu() {
+    const nav = $('.app-nav');
+    id('menu-obre').addEventListener('click', () => posaMenu(true));
+    id('menu-tanca').addEventListener('click', () => posaMenu(false));
+    id('menu-vel').addEventListener('click', () => posaMenu(false));
+    nav.addEventListener('click', (e) => { if (e.target.closest('a') && mobil.matches) posaMenu(false, { focus: false }); });
+    document.addEventListener('keydown', (e) => {
+      if (!document.body.classList.contains('menu-obert')) return;
+      if (e.key === 'Escape') { e.preventDefault(); posaMenu(false); return; }
+      if (e.key !== 'Tab') return;
+      // El focus es queda dins de la barra lateral
+      const f = $$('a, button', nav).filter((x) => x.offsetParent !== null);
+      if (!f.length) return;
+      if (e.shiftKey && document.activeElement === f[0]) { e.preventDefault(); f[f.length - 1].focus(); }
+      else if (!e.shiftKey && document.activeElement === f[f.length - 1]) { e.preventDefault(); f[0].focus(); }
+    });
+    const canvi = () => posaMenu(false, { focus: false });
+    if (mobil.addEventListener) mobil.addEventListener('change', canvi);
+    posaMenu(false, { focus: false });
   }
 
   /* ---------- Rutes ---------- */
@@ -197,6 +242,7 @@
     if (marcActiu) return; // el panell es veu dins del marc; el marc pinta pel seu compte
     const r = ruta();
     pintaNavegacio();
+    $$('.app-baix a').forEach((a) => (a.dataset.vista === r.vista ? a.setAttribute('aria-current', 'page') : a.removeAttribute('aria-current')));
     $$('.app-nav a').forEach((a) => {
       const actual = a.dataset.vista === r.vista;
       if (actual) {

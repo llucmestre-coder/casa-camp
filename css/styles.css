@@ -55,6 +55,11 @@ h1,h2,h3{font-family:var(--f-titol);letter-spacing:var(--track);text-wrap:balanc
 @media (hover:hover){.boto:hover{background:var(--cta-fosc)}}
 .boto:active{background:var(--cta-fosc)}
 .boto-ample{width:100%}
+/* Botons sobre fons fosc (capçalera, hero i barra del mòbil): el verd clar de la paleta, perquè ressaltin (en Lluc,
+   07/11/2026). Text 950 sobre 300: 10,3:1; el botó sobre la banda fosca, 7,3:1. El 500 amb text blanc no arriba (4,3:1). */
+.cap .boto,.hero .boto,.demana-mobil .boto{background:var(--oliva-300);color:var(--oliva-950)}
+@media (hover:hover){.cap .boto:hover,.hero .boto:hover,.demana-mobil .boto:hover{background:var(--oliva-200)}}
+.cap .boto:active,.hero .boto:active,.demana-mobil .boto:active{background:var(--oliva-200)}
 .boto-sec{background:transparent;color:var(--cta);box-shadow:inset 0 0 0 1.5px var(--cta);font-size:.94rem}
 @media (hover:hover){.boto-sec:hover{background:var(--tria);color:var(--cta-fosc)}}
 .boto-sec:active{background:var(--tria);color:var(--cta-fosc)}
@@ -273,6 +278,19 @@ body.full-obert .full{transform:none;visibility:visible;transition:transform .32
 
 @media (prefers-reduced-motion:reduce){
   .full,.vel,.demana-mobil,.camp label,.boto,.boto-sec,.boto-lleu,.tanca,.faq summary{transition:none}
+}
+
+/* Interruptor «Vista mòbil» de la web (js/vista-mobil.js; només amb ?presentacio i a ≥ 861 px): la web dins d'un marc
+   de mòbil, sobre un fons que tapa la pàgina de darrere */
+.vista-mobil-web{display:none}
+@media (min-width:861px){
+  .vista-mobil-web{position:fixed;z-index:60;left:16px;bottom:16px;display:inline-flex;align-items:center;gap:.6rem;min-height:44px;padding:.3rem .5rem .3rem .9rem;border:0;border-radius:999px;background:var(--fosc);color:var(--sobre-fosc);font:700 .94rem var(--f-cos);box-shadow:0 6px 20px rgba(15,31,23,.25);cursor:pointer}
+  .vista-mobil-web::after{content:"";width:2.4rem;height:1.4rem;border-radius:999px;background:radial-gradient(circle at .7rem 50%,var(--fosc) 0 .45rem,transparent .5rem) var(--sobre-fosc-2)}
+  .vista-mobil-web[aria-checked="true"]::after{background:radial-gradient(circle at calc(100% - .7rem) 50%,var(--fosc) 0 .45rem,transparent .5rem) var(--sobre-fosc)}
+  .vista-mobil-web:focus-visible{outline:3px solid var(--accent);outline-offset:3px}
+  .marc-mobil-web{position:fixed;z-index:55;inset:0;display:flex;align-items:center;justify-content:center;padding:20px;background:var(--fons)}
+  .marc-mobil-web iframe{display:block;width:390px;height:min(844px,calc(100vh - 40px));border:1px solid var(--vora);border-radius:28px;background:var(--fons)}
+  body.vista-mobil-web-activa{overflow:hidden}
 }
 
 /* L'atribut hidden ha de guanyar a qualsevol display de component (botons, grups, targetes) */
