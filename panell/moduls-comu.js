@@ -27,7 +27,7 @@
   const diners = (ctx, valor) => (ctx.D.lot.preuMostra ? ctx.D.lot.etiquetaMostra : ctx.D.formatEuros(valor));
   const totalNum = (c) => (c.importLots || 0) + (c.importEnviament || 0);
   const enviamentText = (ctx, c) => {
-    if (c.lliurament === 'recull') return 'Recollida a la granja';
+    if (c.lliurament === 'recull') return 'Recollida a Sort';
     const t = ctx.C.importEnviament(c);
     return t === null ? 'Per acordar' : t;
   };

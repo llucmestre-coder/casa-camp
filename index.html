@@ -85,7 +85,7 @@
         <li><span>Estofat</span><span>0,51&nbsp;kg</span></li>
       </ul>
       <!-- PENDENT: quant pot variar el pes total del lot (pregunta 2 del pastor) -->
-      <p class="l-nota">Pesos aproximats: cada vedella és diferent.</p>
+      <p class="l-nota">Pesos aproximats: cada vedella és diferent. El preu del lot és fix i el preu per kg és sobre 5&nbsp;kg.</p>
     </div>
     <div class="l-caixa">
       <p class="l-preu"><strong id="l-preu">000 €</strong><span id="l-preu-kg">000 €/kg</span></p>
@@ -107,8 +107,8 @@
     <!-- Entrega, enviament i pagament: franja a tota l'amplada sota la fitxa (en Lluc, 07/11/2026), perquè la caixa no faci la secció més llarga -->
     <dl class="l-info">
       <div><dt>Entrega</dt><dd id="t-entrega">Uns dies després que es tanqui la tanda.</dd></div>
-      <!-- PENDENT: quins pobles són les rodalies de Sort (pregunta del pastor) -->
-      <div><dt>Enviament</dt><dd>En fred. Gratis a les rodalies de Sort; més lluny, segons el codi postal.</dd></div>
+      <!-- PENDENT: quins pobles tenen entrega a casa, el preu de cada un i el lloc i l'horari de la recollida a Sort (per al pastor) -->
+      <div><dt>Enviament</dt><dd>En fred, només a Catalunya: recollida a Sort sense cost, a casa si ets de la zona, o en caixa a la resta. El preu el veus abans de pagar.</dd></div>
       <div><dt>Pagament</dt><dd>Targeta, Apple Pay o Google Pay.</dd></div>
     </dl>
   </div>
@@ -147,7 +147,7 @@
     <dl class="l-info">
       <!-- PENDENT (pregunta 16 del pastor): com s'entrega de debò. «Tallada a peces i envasada» és de mostra -->
       <div><dt>Com t'arriba</dt><dd>Tallada a peces i envasada, en fred.</dd></div>
-      <div><dt>Entrega</dt><dd>No va per tandes: el dia i l'enviament, els acordem amb tu quan ens arriba la comanda.</dd></div>
+      <div><dt>Entrega</dt><dd>Només a Catalunya. No va per tandes: s'envia a part, sense esperar cap data. El dia i l'enviament els acordem amb tu quan ens arriba la comanda.</dd></div>
       <div><dt>Pagament</dt><dd>Targeta, Apple Pay o Google Pay.</dd></div>
     </dl>
   </div>
@@ -163,19 +163,20 @@
   <!-- Textos de PLA-COPY.md §1.6. Els [PENDENT] no es mostren: són aquí, cercables -->
   <div class="faq-llista" id="faq-llista">
     <!-- PENDENT: el motiu en paraules del pastor; p. ex., si una tanda correspon a una vedella (pregunta 4) -->
-    <!-- PENDENT: confirmar amb el pastor que una tanda que no s'omple es tanca i s'envia igualment (pregunta 11) -->
-    <details id="faq-tandes"><summary>Com funcionen les tandes?</summary><p data-places>Ajuntem les comandes en tandes de 26 lots i les preparem i enviem totes alhora. Cada tanda es tanca quan s'omple o, com a molt tard, el dia de la data límit, encara que no sigui plena.</p></details>
+    <details id="faq-tandes"><summary>Com funcionen les tandes?</summary><p data-places>Ajuntem les comandes en tandes de 26 lots i les preparem i enviem totes alhora. Obrim una tanda cada 2 setmanes. Cada tanda es tanca quan s'omple o, com a molt tard, el dia de la data límit, i surt igualment encara que no sigui plena.</p></details>
+    <details><summary>Les canals també van per tandes?</summary><p>No. Les canals i les mitges canals s'envien a part, sense esperar cap data, i només a Catalunya: quan ens arriba la comanda, acordem amb tu el dia.</p></details>
     <details><summary>Per què es paga per avançat?</summary><p>Així sabem quants lots hem de preparar per a cada tanda. Si tens dubtes, truca'ns abans de pagar.</p></details>
-    <details><summary>Quan m'arribarà?</summary><p data-dies>Quan es tanca la tanda, la preparem i te l'enviem: la tens a casa uns 00 dies després. El dia que la comanda surt cap a casa teva, t'escrivim amb el dia exacte.</p></details>
-    <!-- PENDENT: quins pobles són les rodalies de Sort, tarifes i fins on s'envia -->
-    <details><summary>Quant costa l'enviament?</summary><p>A les rodalies de Sort no et cobrem res: te la portem nosaltres mateixos. Més lluny, te la porta un transportista i l'enviament es paga. Quan facis la comanda i hi posis el codi postal, et diem el preu abans de pagar.</p></details>
+    <details><summary>Quan m'arribarà?</summary><p data-dies>Quan es tanca la tanda, la preparem i te l'enviem: la tens a casa, o a punt per recollir a Sort, uns 00 dies després. El dia que la comanda surt, t'escrivim amb el dia exacte.</p></details>
+    <!-- PENDENT: quins pobles tenen entrega a casa i el preu de cada un; el preu per caixa i quants lots hi caben (per al pastor) -->
+    <details><summary>Quant costa l'enviament?</summary><p>Depèn d'on siguis. Si vius a Sort o a prop, pots recollir el lot a Sort sense cost o que te'l portem a casa, amb un preu fix pel teu poble. A la resta de Catalunya, te'l portem en caixa, amb un preu fix per caixa. Fora de Catalunya, de moment no enviem. Quan posis el codi postal veuràs el preu abans de pagar.</p></details>
     <!-- PENDENT: com va empaquetada la carn -->
-    <details><summary>Com arriba en fred?</summary><p>Refrigerada fins a la porta de casa, tant si te la portem nosaltres com si te la porta el transportista.</p></details>
-    <!-- PENDENT: què es fa si no hi ha ningú, quan la porta ell i quan la porta el transportista -->
+    <details><summary>Com arriba en fred?</summary><p>Sempre en fred. A casa te la portem nosaltres en un vehicle refrigerat; a la resta de Catalunya va en caixa, també en fred; i si la reculls a Sort, la tens freda quan hi passes.</p></details>
+    <!-- PENDENT: què es fa si no hi ha ningú, quan la porta ell i quan va en caixa -->
     <details><summary>I si no hi soc quan arriba?</summary><p>El dia que surt, t'escrivim amb el dia exacte, perquè sàpigues quan arriba. Si saps que no hi seràs, digues-nos-ho a les notes de l'entrega.</p></details>
     <!-- PENDENT: màxim de lots per comanda -->
     <details><summary>Puc demanar més d'un lot?</summary><p>Sí. Tots els lots d'una comanda viatgen junts: si no caben a la tanda d'ara, van a la següent, i t'ho diem abans de pagar.</p></details>
     <!-- PENDENT: consells de la casa per congelar-la i descongelar-la (la resposta d'ara és un consell general, no és del pastor) -->
+    <details id="faq-recurrent"><summary>Puc fer-lo recurrent?</summary><p>Sí, només amb els lots de 5 kg. Al full de compra, activa «Fes-lo recurrent» i tria cada 2, 4 o 8 setmanes. T'apartem un lot cada vegada. El primer el pagues ara; els següents te'ls cobrem quan es tanca cada tanda. No hi ha permanència: per aturar-ho o saltar-te una tanda, tens un enllaç als correus que t'enviem, que va fins a la data límit de cada tanda.</p></details>
     <details><summary>Es pot congelar?</summary><p>Sí. Si no te la menjaràs en uns dies, congela-la quan t'arribi.</p></details>
     <details><summary>Com es paga?</summary><p>Amb targeta, Apple Pay o Google Pay, en fer la comanda.</p></details>
   </div>
@@ -220,19 +221,31 @@
       <p class="q-max" id="q-max" hidden></p>
       <p class="linia-tanda" id="q-tanda" aria-live="polite"></p>
       <p class="q-canvi" id="q-canvi" hidden><button type="button" class="enllac-boto" id="q-canvi-boto">Prefereixes un lot de 5&nbsp;kg?</button></p>
+      <!-- Subscripció (variant B del prototip, 07/11/2026): només per al lot; apagada d'entrada. Ho pinta js/compra.js -->
+      <div class="sub-b" id="sub-b" hidden>
+        <label class="interruptor" for="sub-on"><span class="tx"><b>Fes-lo recurrent</b><span id="sub-text"></span></span><input type="checkbox" id="sub-on" role="switch"><span class="pal" aria-hidden="true"></span></label>
+        <div id="sub-detall" hidden>
+          <fieldset class="pindoles"><legend class="sr-nomes">Cada quantes setmanes</legend><span id="sub-freq"></span></fieldset>
+          <p class="nota" id="sub-dates" aria-live="polite"></p>
+        </div>
+      </div>
     </section>
 
     <section class="pas" id="pas-2" aria-labelledby="pas-2-titol">
-      <h3 id="pas-2-titol">2. On t'ho portem</h3>
+      <h3 id="pas-2-titol">2. Les teves dades</h3>
       <div class="camps">
         <div class="camp"><label for="f-nom">Nom</label><input id="f-nom" name="nom" autocomplete="given-name" placeholder=" " aria-describedby="f-nom-err"><span class="error" id="f-nom-err" hidden></span></div>
         <div class="camp"><label for="f-cognoms">Cognoms</label><input id="f-cognoms" name="cognoms" autocomplete="family-name" placeholder=" " aria-describedby="f-cognoms-err"><span class="error" id="f-cognoms-err" hidden></span></div>
         <div class="camp"><label for="f-telefon">Telèfon</label><input id="f-telefon" name="telefon" type="tel" autocomplete="tel" inputmode="tel" placeholder=" " aria-describedby="f-telefon-err"><span class="error" id="f-telefon-err" hidden></span></div>
         <div class="camp"><label for="f-email">Correu electrònic</label><input id="f-email" name="email" type="email" autocomplete="email" placeholder=" " aria-describedby="f-email-err"><span class="error" id="f-email-err" hidden></span></div>
-        <div class="camp ample"><label for="f-adreca">Adreça</label><input id="f-adreca" name="adreca" autocomplete="street-address" placeholder=" " aria-describedby="f-adreca-err"><span class="error" id="f-adreca-err" hidden></span></div>
         <div class="camp"><label for="f-cp">Codi postal</label><input id="f-cp" name="cp" autocomplete="postal-code" inputmode="numeric" placeholder=" " aria-describedby="f-cp-err"><span class="error" id="f-cp-err" hidden></span></div>
         <div class="camp"><label for="f-poblacio">Població</label><input id="f-poblacio" name="poblacio" autocomplete="address-level2" placeholder=" " aria-describedby="f-poblacio-err"><span class="error" id="f-poblacio-err" hidden></span></div>
-        <div class="camp ample"><label for="f-notes">Notes per a l'entrega (opcional)</label><textarea id="f-notes" name="notes" autocomplete="off" placeholder=" " rows="2"></textarea></div>
+      </div>
+      <!-- Enviament segons el codi postal (variant B del prototip, 07/11/2026). Ho pinta js/compra.js -->
+      <div class="env-tria" id="env-tria" aria-live="polite"></div>
+      <div class="camps camps-entrega">
+        <div class="camp ample" id="camp-adreca"><label for="f-adreca">Adreça</label><input id="f-adreca" name="adreca" autocomplete="street-address" placeholder=" " aria-describedby="f-adreca-err"><span class="error" id="f-adreca-err" hidden></span></div>
+        <div class="camp ample" id="camp-notes"><label for="f-notes">Notes per a l'entrega (opcional)</label><textarea id="f-notes" name="notes" autocomplete="off" placeholder=" " rows="2"></textarea></div>
       </div>
       <div class="desglos" id="desglos" aria-live="polite">
         <div><span id="d-lots">Lots</span><span id="d-lots-imp"></span></div>
@@ -241,7 +254,13 @@
       </div>
       <p class="nota-enviament" id="d-nota"></p>
       <p class="avis-errors" id="avis-errors" role="alert" hidden></p>
+      <!-- Avisos de tanda nova (P45, art. 21.2 LSSI; variant A): text pla i casella normal, just abans de «Continua» -->
+      <div class="avis-a" id="avis-tanda">
+        <p>T'avisarem per correu quan obri una tanda nova.</p>
+        <label class="casella" for="f-no-avisos"><input type="checkbox" id="f-no-avisos" name="no-avisos"><span>No vull rebre aquests avisos</span></label>
+      </div>
       <button type="button" class="boto boto-ample" id="continua">Continua</button>
+      <a class="boto boto-ample boto-trucada" id="truca" href="tel:+34646455128" hidden>Truca'ns</a>
     </section>
 
     <section class="pas" id="pas-3" aria-labelledby="pas-3-titol" hidden>

@@ -17,6 +17,12 @@
     return d + ' ' + (/^[aeiou]/.test(mes) ? "d'" : 'de ') + mes;
   }
 
+  // «2026-11-29» → «29 nov»; els mesos de tres lletres, per a llistes de dates curtes
+  function dataMini(iso) {
+    const [, m, d] = String(iso).split('-').map(Number);
+    return m && d ? d + ' ' + MESOS[m - 1].slice(0, 3) : '';
+  }
+
   // «3 de desembre, 18.42», a partir d'un ISO complet
   function dataHora(isoComplet) {
     const t = new Date(isoComplet);
@@ -52,15 +58,16 @@
 
   // Etiquetes d'import de mostra (`000 €`, `00 €`) o reals, segons dades.js
   const importLots = (id, n) => D.preuProducte(id, n).etiqueta;
+  // El cost d'enviament d'una comanda ja feta (zona, mode i poble desats): per saber si la xifra és de mostra
+  const costDe = (c) => D.costEnviament(c.client.cp, { mode: c.enviament && c.enviament.mode, poble: c.enviament && c.enviament.poble, lots: c.lots });
   function importEnviament(c) {
     if (!c.tandaId && c.importEnviament === null) return null;
-    if (c.lliurament === 'repartiment-propi') return 'gratis';
-    const r = D.enviament.resta;
-    return r.mostra ? r.etiquetaMostra : D.formatEuros(c.importEnviament);
+    if (c.lliurament === 'recull') return 'Recollida a Sort';
+    return costDe(c).mostra ? costDe(c).etiqueta : D.formatEuros(c.importEnviament);
   }
   function importTotal(c) {
     const l = D.preuProducte(c.producte, c.lots);
-    const enviamentMostra = c.lliurament === 'transportista' && D.enviament.resta.mostra;
+    const enviamentMostra = !!c.lliurament && c.lliurament !== 'recull' && costDe(c).mostra;
     if (l.mostra || enviamentMostra) return (D.productes[c.producte] && D.productes[c.producte].etiquetaMostra) || D.lot.etiquetaMostra;
     return D.formatEuros(l.import + (c.importEnviament || 0));
   }
@@ -73,15 +80,15 @@
 
   // Imports d'una compra abans de pagar (full de compra i pàgina de pagament): preu del producte, enviament pel codi
   // postal i total. Les canals no van per tandes: l'entrega és per acordar i el total és el producte.
-  function resumCompra(id, n, cp) {
+  function resumCompra(id, n, cp, opcions) {
     const p = D.productes[id];
     const aPart = !p.ocupaPlaces;
     const preu = importLots(id, n);
-    const env = D.costEnviament(cp);
+    const env = D.costEnviament(cp, Object.assign({ lots: n }, opcions));
     const mostra = D.preuProducte(id, n).mostra || env.mostra;
     let total = null;
     if (aPart) total = preu;
-    else if (env.valid) total = mostra ? p.etiquetaMostra || D.lot.etiquetaMostra : D.formatEuros(D.preuProducte(id, n).import + env.import);
+    else if (env.complet) total = mostra ? p.etiquetaMostra || D.lot.etiquetaMostra : D.formatEuros(D.preuProducte(id, n).import + env.import);
     const unitari = D.lot.preuMostra ? D.lot.etiquetaMostra : D.formatEuros(D.lot.preu);
     return { aPart, preu, env, total, unitari };
   }
@@ -100,5 +107,5 @@
     },
   };
 
-  window.CasaCamp = { fraseTandaSeguent, MESOS, dataCurta, dataHora, lots, queden, producte, diesEntrega, ambPresentacio, desaDades, esc, importLots, importEnviament, importTotal, kg, z2, resumCompra, comandaEnCurs };
+  window.CasaCamp = { fraseTandaSeguent, MESOS, dataCurta, dataMini, dataHora, lots, queden, producte, diesEntrega, ambPresentacio, desaDades, esc, importLots, importEnviament, importTotal, kg, z2, resumCompra, comandaEnCurs };
 })();

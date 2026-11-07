@@ -428,10 +428,10 @@
           const cobra = efectiu && ctx.actiu('pagaments') ? ` · ${K.plural(efectiu, '# en efectiu: cobra-la en entregar', '# en efectiu: cobra-les en entregar')}` : '';
           sortida.push({ id: 'ruta-surt:' + t.id, prioritat: 'data', tandaId: t.id, pas: 'lliurament', titol: `Reparteix ${porta.length === 1 ? 'una comanda' : porta.length + ' comandes'} de la tanda ${t.numero}`, detall: pobles.join(' · ') + cobra, boto: { text: 'Obre la ruta', hash: '#tanda=' + t.id } });
         }
-        // La que la ve a buscar a la granja: s'espera que vingui (no és cap repartiment)
+        // La que la ve a buscar a Sort: s'espera que vingui (no és cap repartiment)
         for (const c of pend.filter((x) => x.lliurament === 'recull')) {
           const cobra = perCobrar(c) && ctx.actiu('pagaments');
-          sortida.push({ id: 'ruta-recull:' + c.id, prioritat: 'info', espera: true, tandaId: t.id, pas: 'lliurament', titol: `${c.client.nom} la ve a buscar a la granja`, detall: `${K.nomComplet(c)} · ${ctx.C.lots(c.lots)} · tanda ${t.numero}${cobra ? ' · en efectiu: cobra-la quan la hi donis' : ''}`, tel: { href: K.telHref(c), text: 'Truca al ' + c.client.telefon }, boto: { text: cobra ? 'Ja l’ha recollida i pagada' : 'Ja l’ha recollida', accio: 'entrega', args: { comandaId: c.id } } });
+          sortida.push({ id: 'ruta-recull:' + c.id, prioritat: 'info', espera: true, tandaId: t.id, pas: 'lliurament', titol: `${c.client.nom} la ve a buscar a Sort`, detall: `${K.nomComplet(c)} · ${ctx.C.lots(c.lots)} · tanda ${t.numero}${cobra ? ' · en efectiu: cobra-la quan la hi donis' : ''}`, tel: { href: K.telHref(c), text: 'Truca al ' + c.client.telefon }, boto: { text: cobra ? 'Ja l’ha recollida i pagada' : 'Ja l’ha recollida', accio: 'entrega', args: { comandaId: c.id } } });
         }
       }
       for (const ev of ctx.M.esdeveniments({ tipus: 'ruta-absent', vist: false })) {
@@ -468,7 +468,7 @@
           if (!cs.length) return '';
           const grups = new Map();
           for (const c of cs) {
-            const clau = c.lliurament === 'recull' ? 'La recullen a la granja' : c.client.poblacio;
+            const clau = c.lliurament === 'recull' ? 'La recullen a Sort' : c.client.poblacio;
             if (!grups.has(clau)) grups.set(clau, []);
             grups.get(clau).push(c);
           }

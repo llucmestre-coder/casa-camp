@@ -17,6 +17,8 @@
   const CLAU = 'cassovall:v2';
   const CLAU_V1 = 'cassovall:v1'; // abans dels esdeveniments i dels mòduls: només es llegeix, per migrar-ne l'estat
   const VERSIO = 2;
+  // Canvis de configuració per defecte entre fases de la versió real: un estat desat d'abans es posa al dia una sola vegada
+  const FASE = 'A';
   const DIA = 86400000;
   const MAX_PLACES = 500;
 
@@ -115,7 +117,7 @@
     }
 
     function llavor() {
-      const e = { versio: VERSIO, config: configPerDefecte(), tandes: [], comandes: [], correus: [], esdeveniments: [], dadesModuls: {}, comptadors: { comanda: 1000, correu: 0, esdeveniment: 0 } };
+      const e = { versio: VERSIO, fase: FASE, config: configPerDefecte(), tandes: [], comandes: [], correus: [], esdeveniments: [], dadesModuls: {}, comptadors: { comanda: 1000, correu: 0, esdeveniment: 0 } };
       const places = e.config.placesPerTanda;
       const ls = dades.llavor;
       const dia = (dies) => afegeixDies(avui(), dies);
@@ -131,6 +133,7 @@
           lots: b.lots,
           tandaId: t.id,
           nova: false,
+          enviament: b.mode ? { mode: b.mode } : undefined,
           creada: iso(b.fa),
           metodePagament: metodes[i % metodes.length],
         });
@@ -277,17 +280,36 @@
 
     // `lots` = unitats del producte. `places` = places de tanda que ocupa (instantània de la configuració d'aquell
     // moment; 0 i `tandaId: null` si el producte no n'ocupa: «entrega per acordar», sense enviament calculat).
+    const normaNom = (s) => String(s || '').trim().toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '');
+
+    // El cost d'enviament d'una comanda a partir del que ha triat el comprador (`enviament: { mode, poble }`). Si la
+    // recull ell mateix a Sort (`recull`, també per telèfon), 0 €. Per telèfon, sense `mode` a les rodalies s'entén «a
+    // casa», i el poble és el de la població que ha dit el comprador (si no coincideix amb cap, falta triar-lo).
+    function costDeComanda(client, lots, enviament, recull, telefon) {
+      if (recull) return { valid: true, enviable: true, complet: true, cal: null, zona: null, lliurament: 'recull', mode: 'recollida', poble: null, caixes: null, gratis: true, import: 0, etiqueta: null, mostra: false };
+      const eo = enviament || {};
+      const o = { lots, mode: eo.mode, poble: eo.poble };
+      if (telefon && !o.mode) {
+        o.mode = 'casa';
+        if (!o.poble) o.poble = (dades.poblesDeCP(client.cp).find((p) => normaNom(p.nom) === normaNom(client.poblacio)) || {}).nom;
+      }
+      return dades.costEnviament(client.cp, o);
+    }
+
     function afegeixComanda(e, d) {
       e.comptadors.comanda += 1;
       const producte = d.producte || 'lot';
       const cfg = dades.productes[producte];
       const ocupa = !!(cfg && cfg.ocupaPlaces);
-      const cost = dades.costEnviament(d.client.cp);
       const recull = ocupa && !!d.recull;
+      const cost = costDeComanda(d.client, d.lots, d.enviament, recull, d.origen === 'telefon');
       const c = {
-        // «repartiment-propi» (gratis, el porta ell), «transportista» (de pagament) o «recull» (el comprador passa a
-        // buscar-la; només per telèfon); null si no entra a cap tanda
-        lliurament: ocupa ? (recull ? 'recull' : cost.valid ? cost.lliurament : null) : null,
+        // «recull» (el comprador la recull a Sort), «repartiment-propi» (a casa, el porta el pastor, preu del poble) o
+        // «transportista» (en caixa a la resta de Catalunya); null si no entra a cap tanda o l'enviament no és definitiu
+        lliurament: ocupa ? (cost.complet ? cost.lliurament : null) : null,
+        enviament: ocupa ? { mode: cost.mode || null, poble: cost.poble || null, caixes: cost.caixes || null } : null,
+        // P45 (art. 21.2 LSSI): true tret que el comprador hagi marcat «No vull rebre aquests avisos»
+        avisosTanda: d.avisosTanda !== false,
         metodePagament: d.metodePagament || dades.pagament.metodes[0],
         id: idComanda(e.comptadors.comanda),
         creada: d.creada || iso(0),
@@ -298,7 +320,7 @@
         places: ocupa ? d.lots * cfg.placesPerUnitat : 0,
         tandaId: ocupa ? d.tandaId : null,
         importLots: dades.preuProducte(producte, d.lots).import,
-        importEnviament: ocupa ? (!recull && cost.valid ? cost.import : 0) : null,
+        importEnviament: ocupa ? (cost.complet ? cost.import : 0) : null,
         // D'on ve la comanda (web o telèfon), com va el cobrament ('pagat', 'pendent', 'fallit', 'retornat', 'recurrent'),
         // quan s'ha entregat (null si encara no) i, si no hi cabia a la primera tanda oberta, quina era
         origen: d.origen || 'web',
@@ -330,7 +352,7 @@
         comandaId: comanda.id,
         tandaId: tanda ? tanda.id : null,
         dades: {
-          comanda: { id: comanda.id, producte: comanda.producte, lots: comanda.lots, importLots: comanda.importLots, importEnviament: comanda.importEnviament, lliurament: comanda.lliurament, metodePagament: comanda.metodePagament, pagament: comanda.pagament, client: copia(comanda.client) },
+          comanda: { id: comanda.id, producte: comanda.producte, lots: comanda.lots, importLots: comanda.importLots, importEnviament: comanda.importEnviament, lliurament: comanda.lliurament, enviament: copia(comanda.enviament), avisosTanda: comanda.avisosTanda !== false, origenSubscripcio: comanda.origenSubscripcio || null, subscripcio: comanda.subscripcio ? copia(comanda.subscripcio) : null, metodePagament: comanda.metodePagament, pagament: comanda.pagament, client: copia(comanda.client) },
           // `null` si la comanda no entra a cap tanda (entrega per acordar)
           tanda: tanda ? { id: tanda.id, numero: tanda.numero, nom: tanda.nom, dataLimit: tanda.dataLimit, places: tanda.places, estat: tanda.estat, ocupats: lotsDe(e, tanda.id) } : null,
         },
@@ -373,6 +395,9 @@
           lots: s.lotsPerEntrega,
           tandaId: t.id,
           nova: false,
+          enviament: base.enviament ? { mode: base.enviament.mode, poble: base.enviament.poble } : undefined,
+          avisosTanda: base.avisosTanda,
+          recull: base.lliurament === 'recull',
           pagament: 'recurrent',
           metodePagament: base.metodePagament,
           origenSubscripcio: base.id,
@@ -581,7 +606,7 @@
     // Qui rep el correu d'un canvi d'estat de la tanda. `ara`: les que s'entreguen en aquest mateix moment.
     function rebCorreuEstat(e, t, nou, c, ara) {
       if (nou === 'oberta') return false;
-      if (!c.client.email || c.lliurament === 'recull') return false; // per telèfon sense correu, o la recull: ho sap pel telèfon
+      if (!c.client.email) return false; // per telèfon sense correu: ho sap pel telèfon (qui recull a Sort i té correu, rep l'avís que és a punt)
       // Només les que surten: a la retinguda no se li promet res («aviat la començarem a preparar», «ha sortit»), i la
       // retornada ja no és de la tanda (ni tan sols si els diners es retornen amb el paquet en camí)
       if (!surtAmbTanda(c) || retornada(c)) return false;
@@ -657,7 +682,8 @@
 
     /* ---------- Validació del comprador ---------- */
 
-    function validaClient(c) {
+    // `opcions.sensAdreca`: qui recull a Sort no cal que doni adreça (ni notes d'entrega); la resta de camps es demanen igual
+    function validaClient(c, opcions) {
       const x = c || {};
       const s = (v) => String(v === undefined || v === null ? '' : v).trim();
       const errors = {};
@@ -667,7 +693,7 @@
       const tel = s(x.telefon).replace(/[\s.\-]/g, '').replace(/^(\+34|0034)/, '');
       if (!tel) errors.telefon = 'buit';
       else if (!/^[6-9]\d{8}$/.test(tel)) errors.telefon = 'format';
-      if (!s(x.adreca)) errors.adreca = 'buit';
+      if (!s(x.adreca) && !(opcions && opcions.sensAdreca)) errors.adreca = 'buit';
       const cp = dades.validaCP(x.cp);
       if (!cp.valid) errors.cp = cp.motiu;
       if (!s(x.poblacio)) errors.poblacio = 'buit';
@@ -676,10 +702,10 @@
         cognoms: s(x.cognoms),
         email: s(x.email),
         telefon: s(x.telefon),
-        adreca: s(x.adreca),
+        adreca: opcions && opcions.sensAdreca ? '' : s(x.adreca),
         cp: cp.cp,
         poblacio: s(x.poblacio),
-        notes: s(x.notes),
+        notes: opcions && opcions.sensAdreca ? '' : s(x.notes),
       };
       return { ok: Object.keys(errors).length === 0, errors, client: net };
     }
@@ -725,6 +751,12 @@
     // Deixa un estat desat (de qualsevol versió anterior) amb tot el que la versió actual espera. No esborra res.
     function adapta(x) {
       x.versio = VERSIO;
+      // Fase A de la versió real (07/11/2026): la subscripció passa a estar activa per defecte. Es posa al dia una sola
+      // vegada (l'estat desat d'abans no té `fase`); després, el que digui el panell.
+      if (x.fase !== FASE) {
+        x.fase = FASE;
+        x.config.subscripcio = !!dades.subscripcio.activaPerDefecte;
+      }
       if (!x.config.moduls || typeof x.config.moduls !== 'object' || Array.isArray(x.config.moduls)) x.config.moduls = {};
       if (!x.dadesModuls || typeof x.dadesModuls !== 'object' || Array.isArray(x.dadesModuls)) x.dadesModuls = {};
       if (typeof x.comptadors.esdeveniment !== 'number') x.comptadors.esdeveniment = 0;
@@ -747,8 +779,8 @@
         if (c.places === undefined) c.places = c.lots;
         if (c.metodePagament === undefined) c.metodePagament = dades.pagament.metodes[0];
         if (c.lliurament === undefined) {
-          const cost = dades.costEnviament(c.client && c.client.cp);
-          c.lliurament = c.tandaId && cost.valid ? cost.lliurament : null;
+          const cost = dades.costEnviament(c.client && c.client.cp, { lots: c.lots, mode: 'casa' }); // abans de l'elecció del comprador, les rodalies eren «a casa»
+          c.lliurament = c.tandaId && cost.complet ? cost.lliurament : null;
         }
       }
       if (!Array.isArray(x.esdeveniments)) reconstrueixEsdeveniments(x);
@@ -1252,6 +1284,27 @@
       // Abans de pagar: a quina tanda aniria la comanda i per què. No toca res.
       // motiu: 'hi-cap' | 'no-hi-cap-a-la-primera' | 'tanda-nova'.
       // Per a un producte que no ocupa places (canals, per defecte): { ok:true, tandaId:null, motiu:'entrega-per-acordar' }.
+      // Les properes entregues d'una subscripció, de les tandes reals (cap data fixa): la primera és la tanda on aniria
+      // la comanda ara i les altres, cada `freqSetmanes / periodeSetmanes` tandes. Si una tanda encara no existeix, la
+      // seva data és la de l'última coneguda més un període per tanda. Torna { ok, entregues: [{ numero, dataLimit, existent }] }.
+      properesEntregues(freqSetmanes, lots, quantes) {
+        carrega();
+        const q = validaQuantitat('lot', Number(lots === undefined ? 1 : lots));
+        if (!q.ok) return q;
+        const w = copia(estat);
+        const a = assigna(w, q.places);
+        if (!a.ok) return a;
+        const pas = tandesEntreEntregues(Number(freqSetmanes));
+        const ultima = w.tandes.reduce((mx, t) => (t.numero > mx.numero ? t : mx), w.tandes[0]);
+        const entregues = [];
+        for (let i = 0; i < (quantes || 3); i++) {
+          const numero = a.tandaNumero + i * pas;
+          const t = w.tandes.find((x) => x.numero === numero);
+          entregues.push({ numero, dataLimit: t ? t.dataLimit : afegeixDies(ultima.dataLimit, (numero - ultima.numero) * dades.tandes.periodeSetmanes * 7), existent: !!t });
+        }
+        return { ok: true, entregues };
+      },
+
       previsioAssignacio(lots, producte) {
         carrega();
         const q = validaQuantitat(producte || 'lot', Number(lots));
@@ -1275,7 +1328,9 @@
         // cobrament queda «pendent» fins que es cobra
         const telefon = origen === 'telefon';
         const recull = telefon && !!x.recull;
-        const v = telefon ? validaClientTelefon(x.client, recull) : validaClient(x.client);
+        // Recollida a Sort (rodalies): sense adreça ni notes d'entrega
+        const recollidaSort = !telefon && !!x.enviament && x.enviament.mode === 'recollida' && dades.zonaDeCP(x.client && x.client.cp) === 'rodalies';
+        const v = telefon ? validaClientTelefon(x.client, recull) : validaClient(x.client, { sensAdreca: recollidaSort });
         const q = validaQuantitat(x.producte || 'lot', lots);
         if (!q.ok) return q;
         // Forma de pagament (simulada): només les de `dades.pagament.metodes` (targeta, apple-pay, google-pay); per telèfon,
@@ -1284,21 +1339,33 @@
         const metodePagament = x.metodePagament === undefined ? permesos[0] : x.metodePagament;
         if (!permesos.includes(metodePagament)) return err('metode_pagament_invalid', { metodePagament });
         if (!v.ok) return err('client_invalid', { errors: v.errors });
-        // L'efectiu es cobra en entregar, en mà: amb el transportista no hi ha ningú per cobrar-lo
-        if (metodePagament === 'efectiu' && q.ocupa && !recull) {
-          const cost = dades.costEnviament(v.client.cp);
-          if (!cost.valid || cost.lliurament === 'transportista') return err('efectiu_nomes_en_ma');
+        // L'enviament ha de ser definitiu abans de cobrar: fora de Catalunya no s'envia, i a les rodalies cal haver triat
+        // «recullo a Sort» o «a casa» (i el poble, si el codi postal és de diversos)
+        const cost = q.ocupa ? costDeComanda(v.client, lots, x.enviament, recull, telefon) : null;
+        if (cost && !cost.complet) {
+          if (cost.valid && !cost.enviable) return err('no_enviem', { cp: cost.cp });
+          return err('enviament_incomplet', { cal: cost.cal });
         }
+        // Les canals segueixen les mateixes zones que el lot: fora de Catalunya no s'hi envia
+        if (!q.ocupa) {
+          const zona = dades.costEnviament(v.client.cp);
+          if (zona.valid && !zona.enviable) return err('no_enviem', { cp: zona.cp });
+        }
+        // L'efectiu es cobra en entregar, en mà: amb la caixa no hi ha ningú per cobrar-lo
+        if (metodePagament === 'efectiu' && q.ocupa && cost.lliurament === 'transportista') return err('efectiu_nomes_en_ma');
         let sub = null;
         if (x.subscripcio) {
           if (q.producte !== 'lot') return err('subscripcio_nomes_lots');
           if (!estat.config.subscripcio) return err('subscripcio_inactiva');
           const s = x.subscripcio;
-          if (!dades.subscripcio.frequenciesSetmanes.includes(s.frequenciaSetmanes)) return err('subscripcio_invalida', { camp: 'frequenciaSetmanes' });
-          const minim = s.minimLots === undefined ? dades.subscripcio.minimLotsPerDefecte : s.minimLots;
-          if (!Number.isInteger(minim) || minim < 0) return err('subscripcio_invalida', { camp: 'minimLots' });
-          sub = { frequenciaSetmanes: s.frequenciaSetmanes, lotsPerEntrega: lots, minimLots: minim };
+          const freq = s.frequenciaSetmanes === undefined ? dades.subscripcio.frequenciaPerDefecte : s.frequenciaSetmanes;
+          if (!dades.subscripcio.frequenciesSetmanes.includes(freq)) return err('subscripcio_invalida', { camp: 'frequenciaSetmanes' });
+          // Sense permanència: només la freqüència i els lots de cada entrega (cap mínim de lots ni de tandes)
+          sub = { frequenciaSetmanes: freq, lotsPerEntrega: lots };
         }
+        // P45: els avisos de tanda nova van per defecte (art. 21.2 LSSI) tret que el comprador els refusi. Per telèfon no
+        // se li ha ofert la casella: no s'hi avisa fins que ho digui.
+        const avisosTanda = telefon ? x.avisosTanda === true : x.avisosTanda !== false;
         return muta('comanda-nova', () => {
           // Es treballa sobre una còpia i només es manté si tot ha anat bé: una assignació que falla
           // (p. ex. subscriptors que ocupen cada tanda nova) no pot deixar tandes obertes a mig fer.
@@ -1314,7 +1381,7 @@
           }
           // Si no hi cabia a la primera tanda oberta, la tanda on ha anat a parar la deixa apuntada (es veu a la tanda)
           const desviada = q.ocupa && a.primera && a.tandaId !== a.primera.tandaId ? { tandaId: a.primera.tandaId, numero: a.primera.numero, lliures: a.primera.placesLliures } : null;
-          const c = afegeixComanda(w, { client: v.client, producte: q.producte, lots, tandaId: t ? t.id : null, subscripcio: sub, nova: true, metodePagament, origen, recull, desviada, pagament: telefon ? 'pendent' : 'pagat' });
+          const c = afegeixComanda(w, { client: v.client, producte: q.producte, lots, tandaId: t ? t.id : null, subscripcio: sub, nova: true, metodePagament, origen, recull, desviada, enviament: x.enviament, avisosTanda, pagament: telefon ? 'pendent' : 'pagat' });
           // Per telèfon no es manen els correus de la web: ho ha parlat per telèfon. El correu de l'enllaç de pagament és del mòdul de pagaments.
           const ids = telefon ? [] : [afegeixCorreu(w, 'comanda-pastor', c, t, { motiu: 'comanda-nova' }).id, afegeixCorreu(w, 'comanda-confirmacio', c, t, { motiu: 'comanda-nova' }).id];
           const dadesEv = dadesComandaNova(w, c);

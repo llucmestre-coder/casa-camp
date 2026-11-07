@@ -80,7 +80,7 @@
 
     // La tanda dins de la caixa de compra del lot, com a informació de compra
     el('t-titol').textContent = oberta;
-    textQueden = `${queden === 1 ? 'Hi queda 1 lot' : `Hi queden ${queden} lots`} de ${places}. Si s'omple abans, es tanca abans.`;
+    textQueden = `${queden === 1 ? 'Hi queda 1 lot' : `Hi queden ${queden} lots`} de ${places}. Si s'omple abans, es tanca abans; si no, surt igualment.`;
     el('t-queden').textContent = textQueden;
     const pb = el('t-barra');
     pb.setAttribute('aria-valuemax', places);

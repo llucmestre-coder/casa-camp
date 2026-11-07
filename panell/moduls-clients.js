@@ -57,7 +57,7 @@
     return r;
   }
 
-  const EFECTIU_EN_MA = 'En efectiu només si la recull a la granja o si li portes tu: amb el transportista no hi ha qui el cobri. Tria l’enllaç de pagament.';
+  const EFECTIU_EN_MA = 'En efectiu només si la recull a Sort o si li portes tu: amb la caixa no hi ha qui el cobri. Tria l’enllaç de pagament.';
 
   function formAlta(ctx, ui) {
     const lotsMax = ctx.M.maxLotsPerComanda('lot');
@@ -69,7 +69,7 @@
       <p class="fila-detall" id="tf-prev" aria-live="polite"></p>
       <fieldset class="opcions"><legend>Entrega</legend>
         <label><input type="radio" name="tf-entrega" value="casa" checked> A l’adreça</label>
-        <label><input type="radio" name="tf-entrega" value="recull"> La recull a la granja</label>
+        <label><input type="radio" name="tf-entrega" value="recull"> La recull a Sort</label>
       </fieldset>
       <div id="tf-adreca">${camp('tf-adr', 'Adreça', 'type="text" autocomplete="off"')}${camp('tf-cp', 'Codi postal', 'type="text" inputmode="numeric" autocomplete="off"')}${camp('tf-pob', 'Població', 'type="text" autocomplete="off"')}</div>
       <div class="camp-pla"><label for="tf-pagament">Pagament</label><select id="tf-pagament"><option value="pendent">Encara no ho sé</option><option value="efectiu">En efectiu</option><option value="enllac">Enllaç de pagament</option></select></div>
@@ -91,7 +91,7 @@
           if (!r.ok) {
             const e = $(dlg, '#tf-err');
             const primer = r.errors && Object.keys(r.errors)[0];
-            e.textContent = primer ? ERRORS_TELEFON[primer] : r.error === 'efectiu_nomes_en_ma' ? EFECTIU_EN_MA : r.error === 'massa_lots' || r.error === 'lots_invalids' ? `Posa un número de lots entre 1 i ${lotsMax}.` : 'No s’ha pogut apuntar la comanda.';
+            e.textContent = primer ? ERRORS_TELEFON[primer] : r.error === 'efectiu_nomes_en_ma' ? EFECTIU_EN_MA : r.error === 'no_enviem' ? 'Fora de Catalunya no s’hi envia.' : r.error === 'enviament_incomplet' ? 'Posa a la població un dels pobles amb entrega a casa, o tria «La recull a Sort».' : r.error === 'massa_lots' || r.error === 'lots_invalids' ? `Posa un número de lots entre 1 i ${lotsMax}.` : 'No s’ha pogut apuntar la comanda.';
             e.hidden = false;
             return false;
           }
@@ -113,8 +113,8 @@
       if ($(d, 'input[name="tf-entrega"]:checked').value === 'recull') return true;
       const cp = $(d, '#tf-cp').value.trim();
       if (!/^\d{5}$/.test(cp)) return true;
-      const cost = ctx.D.costEnviament(cp);
-      return !!cost.valid && cost.lliurament !== 'transportista';
+      const cost = ctx.D.costEnviament(cp, { mode: 'casa' });
+      return !!cost.valid && cost.zona === 'rodalies';
     };
     const revisa = () => {
       const pot = potEfectiu();
@@ -252,11 +252,12 @@
 
   /* ===================================== CLIENTS ===================================== */
 
-  // Qui s'ha d'avisar que s'ha obert una tanda: els habituals amb correu que encara no hi han comprat i que no s'han avisat
+  // Qui s'ha d'avisar que s'ha obert una tanda: tots els compradors amb correu que encara no hi han comprat, no s'han avisat i no han refusat els avisos
   function aAvisar(ctx, t) {
     const jaAvisats = ((ctx.M.modulDades('clients').avisos || {})[t.id] || {}).claus || [];
     const han = new Set(ctx.M.comandesDeTanda(t.id).map((c) => ctx.M.clauClient(c.client)));
-    return K.habituals(ctx).filter((x) => x.client.email && !han.has(x.clau) && !jaAvisats.includes(x.clau));
+    // P45 (art. 21.2 LSSI): qui ha marcat «No vull rebre aquests avisos» en una comanda no rep cap avís
+    return K.clients(ctx).filter((x) => x.client.email && !han.has(x.clau) && !jaAvisats.includes(x.clau) && !x.comandes.some((c) => c.avisosTanda === false));
   }
 
   function avisa(ctx, t) {
@@ -289,7 +290,7 @@
     const html = `${enrere}
       <h2>${esc(x.nom)}${x.n >= 2 ? ' <span class="distintiu">Habitual</span>' : ''}</h2>
       <div class="accions"><a class="boto" href="tel:${esc(tels)}">Truca</a>${k.email ? `<a class="boto boto-lleu" href="mailto:${esc(k.email)}">Correu</a>` : ''}<a class="boto boto-lleu" href="${esc(wa)}" target="_blank" rel="noopener">WhatsApp</a></div>
-      <section class="targeta"><h3>Dades</h3>${dl([['Telèfon', esc(k.telefon)], ['Correu', esc(k.email)], ['Adreça', esc(ultima.lliurament === 'recull' ? 'La recull a la granja' : K.adrecaText(k))], ['Comandes', String(x.n)], ['Lots en total', String(x.lots)], ['Client des del', esc(ctx.C.dataCurta(x.primera.slice(0, 10)))]])}</section>
+      <section class="targeta"><h3>Dades</h3>${dl([['Telèfon', esc(k.telefon)], ['Correu', esc(k.email)], ['Adreça', esc(ultima.lliurament === 'recull' ? 'La recull a Sort' : K.adrecaText(k))], ['Comandes', String(x.n)], ['Lots en total', String(x.lots)], ['Client des del', esc(ctx.C.dataCurta(x.primera.slice(0, 10)))]])}</section>
       <section><h3>Comandes</h3><ul class="fileres">${x.comandes.slice().reverse().map(fila).join('')}</ul></section>`;
     return {
       html,
@@ -346,7 +347,7 @@
           const t = m.dades.tanda;
           return {
             assumpte: 'Hem obert una tanda nova',
-            cos: [`Hola, ${c.client.nom}:`, '', `Hem obert la tanda ${t.numero}. Pots fer la comanda fins al ${ctx.C.dataCurta(t.dataLimit)}.`, '', 'Si no vols rebre més aquests avisos, [ENLLAÇ DE BAIXA].', '', signatura(ctx)].join('\n'),
+            cos: [`Hola, ${c.client.nom}:`, '', `Hem obert la tanda ${t.numero}. Pots fer la comanda fins al ${ctx.C.dataCurta(t.dataLimit)}.`, '', 'Et tornem a escriure perquè ja has comprat a Casa Camp. Si no vols rebre aquests avisos, [ENLLAÇ DE BAIXA].', '', signatura(ctx)].join('\n'),
           };
         },
       },
@@ -357,7 +358,7 @@
         if (t.tancada || ((ctx.M.modulDades('clients').avisos || {})[t.id])) continue;
         const llista = aAvisar(ctx, t);
         if (!llista.length) continue;
-        sortida.push({ id: 'clients-avisa:' + t.id, prioritat: 'data', tandaId: t.id, pas: 'oberta', titol: `Avisa ${llista.length === 1 ? 'un client habitual' : 'els ' + llista.length + ' clients habituals'}: la tanda ${t.numero} és oberta`, detall: llista.map((x) => x.nom).join(' · '), boto: { text: 'Envia l’avís', accio: 'avisa', args: { tandaId: t.id } } });
+        sortida.push({ id: 'clients-avisa:' + t.id, prioritat: 'data', tandaId: t.id, pas: 'oberta', titol: `Avisa ${llista.length === 1 ? 'un comprador' : 'els ' + llista.length + ' compradors'}: la tanda ${t.numero} és oberta`, detall: llista.map((x) => x.nom).join(' · '), boto: { text: 'Envia l’avís', accio: 'avisa', args: { tandaId: t.id } } });
       }
       return sortida;
     },

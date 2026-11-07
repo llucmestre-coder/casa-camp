@@ -312,7 +312,7 @@
           <div><strong>Casa Camp</strong><br>NIF: [NIF DEL NEGOCI]<br>${esc(tel(ctx))}</div>
           ${dl([['Factura', esc(f.numero)], ['Data', esc(K.dataLlarga(ctx, f.data))], ['Comanda', esc(c.id)]])}
         </div>
-        <div class="factura-client"><h3>Client</h3>${dl([['Nom', esc(K.nomComplet(c))], ['Adreça', esc(c.lliurament === 'recull' ? 'La recull a la granja' : K.adrecaText(k))], ['Correu', esc(k.email)]])}</div>
+        <div class="factura-client"><h3>Client</h3>${dl([['Nom', esc(K.nomComplet(c))], ['Adreça', esc(c.lliurament === 'recull' ? 'La recull a Sort' : K.adrecaText(k))], ['Correu', esc(k.email)]])}</div>
         <table class="taula factura-linies"><thead><tr><th scope="col">Concepte</th><th scope="col">Quantitat</th><th scope="col">Import</th></tr></thead><tbody>
           <tr><td data-label="Concepte">${esc(p ? p.nom : c.producte)}</td><td data-label="Quantitat">${esc(ctx.C.producte(c.producte, c.lots))}</td><td data-label="Import">${esc(ctx.C.importLots(c.producte, c.lots))}</td></tr>
           <tr><td data-label="Concepte">Enviament</td><td data-label="Quantitat"></td><td data-label="Import">${esc(K.enviamentText(ctx, c))}</td></tr>

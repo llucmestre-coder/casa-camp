@@ -26,7 +26,7 @@
   // El cobrament és de la comanda (no d'un mòdul): els quatre estats es veuen sempre; el mòdul de pagaments hi actua
   const PAG_ESTATS = { pagat: 'Pagat', recurrent: 'Pagat', pendent: 'Per cobrar', fallit: 'Cobrament fallit', retornat: 'Retornat' };
   const adrecaText = (k) => [k.adreca, [k.cp, k.poblacio].filter(Boolean).join(' ')].filter(Boolean).join(', ');
-  const enviamentTextComanda = (c) => (c.lliurament === 'recull' ? 'Recollida a la granja' : C.importEnviament(c));
+  const enviamentTextComanda = (c) => (c.lliurament === 'recull' ? 'Recollida a Sort' : C.importEnviament(c));
   const ORIGENS = { web: 'Web', telefon: 'Telèfon', pagament: 'Pagaments', transportista: 'Transportista', escorxador: 'Escorxador', factures: 'Factures', client: 'Client', gestoria: 'Gestoria', panell: 'Tu' };
   // Les vistes de sempre; les dels mòduls les dóna `R.vistes()`. `instalar` no és a la navegació: s'hi va des de Configuració.
   const VISTES = ['avui', 'tandes', 'comandes', 'transport', 'correus', 'configuracio', 'instalar'];
@@ -828,7 +828,7 @@
     const env = enviamentTextComanda(c);
     const rebuts = M.correus({ comandaId: c.id, destinatari: 'comprador' }).filter(R.correuVisible);
     const dl = (parelles) => `<dl class="dades">${parelles.filter((p) => p[1] !== '').map(([a, b]) => `<div><dt>${a}</dt><dd>${b}</dd></div>`).join('')}</dl>`;
-    const lliurament = { 'repartiment-propi': 'El repartim nosaltres', transportista: 'Transportista', recull: 'La recull a la granja' }[c.lliurament] || 'Per acordar';
+    const lliurament = { 'repartiment-propi': 'A casa, el portem nosaltres', transportista: 'En caixa', recull: 'La recull a Sort' }[c.lliurament] || 'Per acordar';
     const mou = c.tandaId && M.potMoure(c.id).ok;
     // Sense el mòdul de pagaments ningú no la cobraria: la fitxa en dona la sortida
     const senseModulPag = !R.actiu('pagaments') && (c.pagament === 'pendent' || c.pagament === 'fallit');
@@ -936,7 +936,7 @@
     const fora = ll.noSurten.length
       ? `<section class="targeta no-imprimeix" id="no-surten"><h3>No surten amb la tanda (${ll.noSurten.length})</h3><ul class="fileres">${ll.noSurten.map((c) => `<li class="fila"><a class="fila-text" href="#comanda=${encodeURIComponent(c.id)}"><span class="fila-nom"><strong>${esc(nomComplet(c.client))}</strong> · ${esc(C.producte(c.producte, c.lots))}</span><span class="fila-detall">${esc(c.motiuNoSurt)}</span></a></li>`).join('')}</ul></section>`
       : '';
-    return taulaTransport('Les repartim nosaltres', ll.repartimentPropi) + taulaTransport('Transportista', ll.transportista) + (ll.recull.comandes.length ? taulaTransport('La recullen a la granja', ll.recull) : '') + fora;
+    return taulaTransport('A casa, per poble', ll.repartimentPropi) + taulaTransport('En caixa (resta de Catalunya)', ll.transportista) + (ll.recull.comandes.length ? taulaTransport('La recullen a Sort', ll.recull) : '') + fora;
   }
 
   function transport() {
@@ -966,7 +966,7 @@
     const t = M.tanda(tandaId);
     const cap = ['Entrega', 'Nom', 'Adreça', 'CP', 'Població', 'Telèfon', 'Lots', 'Notes'];
     const files = [];
-    [['Les repartim nosaltres', ll.repartimentPropi], ['Transportista', ll.transportista], ['La recullen a la granja', ll.recull]].forEach(([nom, llista]) => {
+    [['A casa, per poble', ll.repartimentPropi], ['En caixa (resta de Catalunya)', ll.transportista], ['La recullen a Sort', ll.recull]].forEach(([nom, llista]) => {
       llista.comandes.forEach((c) => files.push([nom, nomComplet(c.client), c.client.adreca, c.client.cp, c.client.poblacio, c.client.telefon, c.places, c.client.notes]));
     });
     const text = '﻿' + [cap].concat(files).map((f) => f.map(csvCel).join(';')).join('\r\n') + '\r\n';
@@ -992,18 +992,27 @@
     const k = c.client;
     const t = d.tanda;
     const prod = C.producte(c.producte, c.lots);
-    const parell = { producte: c.producte, lots: c.lots, lliurament: c.lliurament, importEnviament: c.importEnviament, tandaId: m.tandaId };
+    const parell = { producte: c.producte, lots: c.lots, lliurament: c.lliurament, importEnviament: c.importEnviament, tandaId: m.tandaId, client: k, enviament: c.enviament };
     const total = C.importTotal(parell);
     const env = C.importEnviament(parell);
-    const tipus = c.lliurament === 'repartiment-propi' ? 'el repartim nosaltres' : 'transportista';
+    const recull = c.lliurament === 'recull';
+    const rec = D.enviament.rodalies.recollida;
+    const tipus = c.lliurament === 'repartiment-propi' ? `a casa, el porta el pastor${c.enviament && c.enviament.poble ? ' (' + c.enviament.poble + ')' : ''}` : recull ? 'recollida a Sort' : c.enviament && c.enviament.caixes > 1 ? `en ${c.enviament.caixes} caixes` : 'en caixa';
     const aPart = !t;
     const adreca = `${k.adreca}, ${k.cp} ${k.poblacio}`;
+    const ondeArriba = recull ? `El recolliràs a ${rec.nom}: ${rec.lloc} · ${rec.horari}` : `T’arriba a: ${adreca}`;
     const dies = C.diesEntrega();
     const pl = t ? t.places : '';
     const plena = t && t.ocupats >= t.places;
     const dataLimit = t ? C.dataCurta(t.dataLimit) : '';
     const dataComanda = C.dataHora(m.data);
-    const lotLiniaTanda = c.producte === 'lot' ? `es tanca quan arriba a ${pl} lots o, com a molt tard, el ${dataLimit}` : `es tanca com a molt tard el ${dataLimit}`;
+    // Una tanda surt a la data límit encara que no tingui tots els lots (la gestiona el pastor); si s'omple abans, surt abans
+    const lotLiniaTanda = c.producte === 'lot' ? `es tanca quan arriba a ${pl} lots o, com a molt tard, el ${dataLimit}; si no s’omple, surt igualment` : `es tanca com a molt tard el ${dataLimit}`;
+    // Subscripció (variant B, 07/11/2026): la primera comanda en porta les condicions; les renovacions, el recordatori
+    const sub = c.subscripcio;
+    const liniaSub = sub ? `Has triat fer-lo recurrent: ${c.lots === 1 ? 'un lot' : c.lots + ' lots'} cada ${sub.frequenciaSetmanes} setmanes. ${c.lots === 1 ? 'El primer l’has pagat ara' : 'El primer cop els has pagat ara'}; els següents te’ls cobrem quan es tanca cada tanda, sense permanència. Per aturar-lo o saltar-te una tanda, fins a la data límit: [ENLLAÇ].` : c.origenSubscripcio ? 'Aquesta comanda és de la teva subscripció. Per saltar-te la propera tanda o aturar-la, fins a la data límit: [ENLLAÇ].' : '';
+    // P45 (art. 21.2 LSSI): l'avís de tanda nova, amb la baixa (només si el comprador no l'ha refusat)
+    const liniaAvis = c.avisosTanda === false ? '' : 'T’avisarem per correu quan obri una tanda nova. Si no vols rebre aquests avisos, [ENLLAÇ DE BAIXA].';
 
     switch (m.plantilla) {
       case 'comanda-pastor':
@@ -1016,12 +1025,13 @@
             nomComplet(k),
             `Telèfon: ${k.telefon}`,
             `Correu: ${k.email}`,
-            `Adreça: ${adreca}`,
+            `Adreça: ${recull ? '— (ho recull a Sort)' : adreca}`,
             `Notes per a l’entrega: ${k.notes || '—'}`,
             '',
             'Comanda',
             `${prod}: ${C.importLots(c.producte, c.lots)}`,
             ...(aPart ? [] : [`Enviament: ${env} (${tipus})`]),
+            ...(sub ? [`Subscripció: cada ${sub.frequenciaSetmanes} setmanes, sense permanència`] : []),
             `Total pagat: ${total}`,
             '',
             aPart ? 'Va a part, sense tanda. Truca-li per quedar el dia.' : `Tanda ${t.numero}: ara té ${t.ocupats} ${de(t.places)} lots. Data límit: ${dataLimit}.`,
@@ -1033,37 +1043,39 @@
         const tandaText = aPart
           ? 'Et trucarem per quedar el dia que te la portem.'
           : plena
-            ? `Amb la teva comanda, la tanda ${t.numero} ha quedat plena i tancada. Ara la preparem, i quan surti cap a casa teva t’escriurem amb el dia que t’arriba.`
-            : `Va a la tanda ${t.numero}, que ${lotLiniaTanda}. Uns ${dies} dies després que es tanqui, la tens a casa. Quan la comanda surti, t’escriurem amb el dia exacte.`;
+            ? `Amb la teva comanda, la tanda ${t.numero} ha quedat plena i tancada. Ara la preparem, i ${recull ? 'quan sigui a punt per recollir a Sort t’escriurem amb el dia.' : 'quan surti cap a casa teva t’escriurem amb el dia que t’arriba.'}`
+            : `Va a la tanda ${t.numero}, que ${lotLiniaTanda}. Uns ${dies} dies després que es tanqui, ${recull ? 'la pots recollir a Sort' : 'la tens a casa'}. Quan la comanda surti, t’escriurem amb el dia exacte.`;
         return {
           assumpte: `Comanda pagada · ${c.id}`,
-          cos: [`Hola, ${k.nom}:`, '', 'Gràcies per la comanda. La comanda és pagada.', '', `Has demanat: ${prod}`, `Comanda: ${c.id}`, `Total: ${total}`, `T’arriba a: ${adreca}`, '', tandaText, '', 'Si has de canviar alguna cosa, truca’ns.', '', SIGNATURA].join('\n'),
+          cos: [`Hola, ${k.nom}:`, '', 'Gràcies per la comanda. La comanda és pagada.', '', `Has demanat: ${prod}`, `Comanda: ${c.id}`, `Total: ${total}`, ondeArriba, '', tandaText, ...(liniaSub ? ['', liniaSub] : []), '', 'Si has de canviar alguna cosa, truca’ns.', ...(liniaAvis ? ['', liniaAvis] : []), '', SIGNATURA].join('\n'),
         };
       }
       case 'tanda-completa':
         return {
           assumpte: `La tanda ${t.numero} ja és tancada`,
-          cos: [`Hola, ${k.nom}:`, '', 'La tanda on hi ha la teva comanda ja és tancada: no hi entren més comandes. La teva hi és, i aviat la començarem a preparar. T’escriurem quan la comanda surti cap a casa teva.', '', SIGNATURA].join('\n'),
+          cos: [`Hola, ${k.nom}:`, '', `La tanda on hi ha la teva comanda ja és tancada: no hi entren més comandes. La teva hi és, i aviat la començarem a preparar. T’escriurem quan ${recull ? 'sigui a punt per recollir a Sort' : 'la comanda surti cap a casa teva'}.`, ...(liniaSub && !sub ? ['', liniaSub] : []), '', SIGNATURA].join('\n'),
         };
       case 'tanda-preparacio':
         return {
           assumpte: 'Estem preparant la teva comanda',
-          cos: [`Hola, ${k.nom}:`, '', `Ja estem preparant les comandes de la tanda ${t.numero}. La teva hi és: ${prod}, comanda ${c.id}.`, '', 'T’escriurem quan surti cap a casa teva.', '', SIGNATURA].join('\n'),
+          cos: [`Hola, ${k.nom}:`, '', `Ja estem preparant les comandes de la tanda ${t.numero}. La teva hi és: ${prod}, comanda ${c.id}.`, '', recull ? 'T’escriurem quan sigui a punt per recollir a Sort.' : 'T’escriurem quan surti cap a casa teva.', '', SIGNATURA].join('\n'),
         };
       case 'tanda-enviada': {
         const propi = c.lliurament === 'repartiment-propi';
+        if (recull) return { assumpte: 'La teva comanda és a punt', cos: [`Hola, ${k.nom}:`, '', `La teva comanda ja és a punt per recollir a ${rec.nom}: ${rec.lloc} · ${rec.horari}.`, '', `Si no pots passar-hi, truca’ns al ${TEL} i quedem d’una altra manera.`, '', 'Recorda posar la carn a la nevera en arribar a casa.', '', SIGNATURA].join('\n') };
         return propi
           ? { assumpte: 'Et portem la comanda', cos: [`Hola, ${k.nom}:`, '', `La teva comanda ja és en camí. Te la portem nosaltres mateixos, refrigerada, a ${adreca}.`, '', `Si no hi has de ser, truca’ns al ${TEL} i quedem d’una altra manera.`, '', 'Recorda posar la carn a la nevera en arribar.', '', SIGNATURA].join('\n') }
-          : { assumpte: 'La teva comanda és en camí', cos: [`Hola, ${k.nom}:`, '', `La teva comanda ha sortit amb el transportista. T’arriba refrigerada a ${adreca}.`, '', `Si no hi has de ser, truca’ns al ${TEL} com més aviat millor i ho mirem.`, '', 'Recorda posar la carn a la nevera en arribar.', '', SIGNATURA].join('\n') };
+          : { assumpte: 'La teva comanda és en camí', cos: [`Hola, ${k.nom}:`, '', `La teva comanda ja és en camí, en caixa refrigerada, a ${adreca}.`, '', `Si no hi has de ser, truca’ns al ${TEL} com més aviat millor i ho mirem.`, '', 'Recorda posar la carn a la nevera en arribar.', '', SIGNATURA].join('\n') };
       }
       case 'comanda-moguda': {
         const x = d.extra || {};
         const abans = x.de ? `no ha sortit amb la tanda ${x.de}` : 'no ha sortit amb la seva tanda';
         return x.pagada
-          ? { assumpte: `La teva comanda va a la tanda ${t.numero}`, cos: [`Hola, ${k.nom}:`, '', `Ja tenim el pagament de la comanda ${c.id}. Com que ${abans}, va a la tanda ${t.numero}, que ${lotLiniaTanda}.`, '', 'T’escriurem quan surti cap a casa teva.', '', SIGNATURA].join('\n') }
+          ? { assumpte: `La teva comanda va a la tanda ${t.numero}`, cos: [`Hola, ${k.nom}:`, '', `Ja tenim el pagament de la comanda ${c.id}. Com que ${abans}, va a la tanda ${t.numero}, que ${lotLiniaTanda}.`, '', recull ? 'T’escriurem quan sigui a punt per recollir a Sort.' : 'T’escriurem quan surti cap a casa teva.', '', SIGNATURA].join('\n') }
           : { assumpte: `La teva comanda va a la tanda ${t.numero}`, cos: [`Hola, ${k.nom}:`, '', `La comanda ${c.id} ${abans}: encara no ens consta el pagament. L’hem passat a la tanda ${t.numero}, que ${lotLiniaTanda}.`, '', `Quan la paguis, sortirà amb aquesta tanda. Si tens cap dubte, truca’ns al ${TEL}.`, '', SIGNATURA].join('\n') };
       }
       case 'tanda-entregada':
+        if (recull) return { assumpte: 'Ja has recollit la comanda', cos: [`Hola, ${k.nom}:`, '', 'Hem marcat la teva comanda com a recollida a Sort. Si hi ha res que no estigui bé, truca’ns.', '', 'Gràcies per comprar-nos directament.', '', SIGNATURA].join('\n') };
         return { assumpte: 'Ja tens la comanda a casa', cos: [`Hola, ${k.nom}:`, '', 'La teva comanda ja s’ha entregat. Si hi ha res que no estigui bé, truca’ns.', '', 'Gràcies per comprar-nos directament.', '', SIGNATURA].join('\n') };
       default:
         // Una plantilla d'un mòdul: el text el posa el mòdul (panell/moduls.js, `correus[].text`)

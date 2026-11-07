@@ -49,13 +49,18 @@
     const a = M.previsioAssignacio(c.lots, c.producte);
     if (!a.ok) return '';
     if (!D.productes[c.producte].ocupaPlaces) return "Pagues ara i et truquem per quedar el dia de l'entrega.";
-    return `La tanda es tanca com a molt tard el ${C.dataCurta(a.dataLimit)}, i uns ${C.diesEntrega()} dies després tens la carn a casa. T'escrivim el dia que surt.`;
+    const on = c.enviament && c.enviament.mode === 'recollida' ? 'la pots recollir a Sort' : 'tens la carn a casa';
+    return `La tanda es tanca com a molt tard el ${C.dataCurta(a.dataLimit)}, i uns ${C.diesEntrega()} dies després ${on}. T'escrivim el dia que surt.`;
   }
 
+  // La subscripció, si n'hi ha: una línia al resum i a la confirmació
+  const liniaSub = (s, lots) => `Recurrent: ${lots === 1 ? 'un lot' : lots + ' lots'} cada ${s.frequenciaSetmanes} setmanes. ${lots === 1 ? 'El primer el pagues ara' : 'El primer cop els pagues ara'}; els següents te’ls cobrem quan es tanca cada tanda. Ho pots aturar quan vulguis.`;
+
   function pintaResum(c) {
-    const r = C.resumCompra(c.producte, c.lots, c.client.cp);
+    const r = C.resumCompra(c.producte, c.lots, c.client.cp, c.enviament || {});
     const quantitat = c.producte === 'lot' ? `${C.lots(c.lots)} · ${c.lots * D.lot.kg} kg` : 'Quantitat: 1';
-    const env = r.aPart ? 'Per acordar' : r.env.valid ? (r.env.gratis ? 'Gratis' : r.env.etiqueta) : '—';
+    const recull = !r.aPart && r.env.lliurament === 'recull';
+    const env = r.aPart ? 'Per acordar' : r.env.complet ? (recull ? '0 €' : r.env.etiqueta) : '—';
     const k = c.client;
     resum.innerHTML = `
       <p class="pg-eti">Paga a Casa Camp</p>
@@ -69,8 +74,10 @@
         <div class="pg-total"><dt>Total</dt><dd>${esc(r.total || r.preu)}</dd></div>
       </dl>
       <div class="pg-entrega">
-        <p><b>T'arriba a:</b> ${esc(k.nom)} ${esc(k.cognoms)}, ${esc(k.adreca)}, ${esc(k.cp)} ${esc(k.poblacio)}</p>
-        <p>${esc(recordatori(c))}</p>
+        <p>${recull ? `<b>El recolliràs a:</b> ${esc(D.enviament.rodalies.recollida.nom)} · ${esc(D.enviament.rodalies.recollida.lloc)} · ${esc(D.enviament.rodalies.recollida.horari)}` : `<b>T'arriba a:</b> ${esc(k.nom)} ${esc(k.cognoms)}, ${esc(k.adreca)}, ${esc(k.cp)} ${esc(k.poblacio)}`}</p>
+        <p>${esc(recordatori(c))}</p>${c.subscripcio ? `
+        <p>${esc(liniaSub(c.subscripcio, c.lots))}</p>
+        <p>${esc(`Avui pagues ${r.total || r.preu}. A cada tanda següent, ${r.total || r.preu} (${C.lots(c.lots)}${recull ? '' : ' + enviament'}).`)}</p>` : ''}
       </div>`;
     return r;
   }
@@ -223,7 +230,7 @@
   function acaba() {
     const c = S.comanda;
     const client = Object.assign({}, c.client, { email: el('pg-email').value.trim() });
-    const r = M.crearComanda({ lots: c.lots, producte: c.producte, client, metodePagament: S.metode });
+    const r = M.crearComanda({ lots: c.lots, producte: c.producte, client, metodePagament: S.metode, enviament: c.enviament || undefined, subscripcio: c.subscripcio || undefined, avisosTanda: c.avisosTanda !== false });
     if (!r.ok) { avis('No s’ha pogut fer el pagament. No t’hem cobrat res. Torna-ho a provar.'); return; }
     C.comandaEnCurs.esborra();
     confirmacio(r, client);
@@ -242,9 +249,10 @@
       tanda = t && t.ocupacio.plena
         ? `Amb la teva comanda, la <strong>tanda ${a.tandaNumero}</strong> queda plena i tancada. Ara la preparem.`
         : `Va a la <strong>tanda ${a.tandaNumero}</strong>, que es tanca com a molt tard el ${C.dataCurta(a.dataLimit)}.`;
-      ultima = ` La tens a casa uns ${C.diesEntrega()} dies després que es tanqui la tanda. Quan surti, t’escriurem amb el dia exacte.`;
+      ultima = ` ${c.lliurament === 'recull' ? 'La podràs recollir a Sort' : 'La tens a casa'} uns ${C.diesEntrega()} dies després que es tanqui la tanda. Quan surti, t’escriurem amb el dia exacte.`;
     }
-    const items = [`Comanda <strong>${esc(c.id)}</strong>`, `${esc(C.producte(c.producte, c.lots))} · ${esc(total)} pagats`, tanda, `T’arriba a: ${esc(client.adreca)}, ${esc(client.cp)} ${esc(client.poblacio)}`];
+    const items = [`Comanda <strong>${esc(c.id)}</strong>`, `${esc(C.producte(c.producte, c.lots))} · ${esc(total)} pagats`, tanda, c.lliurament === 'recull' ? `El recolliràs a Sort: ${esc(D.enviament.rodalies.recollida.lloc)} · ${esc(D.enviament.rodalies.recollida.horari)}` : `T’arriba a: ${esc(client.adreca)}, ${esc(client.cp)} ${esc(client.poblacio)}`];
+    if (c.subscripcio) items.push(esc(liniaSub(c.subscripcio, c.lots)));
     const vista = document.createElement('div');
     vista.className = 'pg-confirmacio';
     vista.innerHTML = `
@@ -286,9 +294,21 @@
       missatge('No hi ha cap comanda per pagar', 'Potser ja l’has pagada o ha passat massa estona. Torna a la web per fer-ne una.', false);
       return;
     }
-    const v = M.validaClient(c.client);
+    const v = M.validaClient(c.client, { sensAdreca: !!c.enviament && c.enviament.mode === 'recollida' && D.zonaDeCP(c.client.cp) === 'rodalies' });
     if (!v.ok || !String(c.client.cognoms || '').trim()) {
       missatge('Falten dades de l’entrega', 'Torna al full de compra i revisa-les.', false);
+      torna.href = C.ambPresentacio('index.html#comanda');
+      return;
+    }
+    // Fora de Catalunya no es cobra res, ni el lot ni les canals
+    const zonaCP = D.costEnviament(c.client.cp);
+    if (zonaCP.valid && !zonaCP.enviable) {
+      missatge('De moment no enviem fora de Catalunya', 'Truca’ns i en parlem.', true);
+      return;
+    }
+    // L'enviament ha de ser definitiu (res no es cobra sense saber com i quant)
+    if (D.productes[c.producte].ocupaPlaces && !D.costEnviament(c.client.cp, Object.assign({ lots: c.lots }, c.enviament)).complet) {
+      missatge('Falten dades de l’entrega', 'Torna al full de compra i tria com vols rebre el lot.', false);
       torna.href = C.ambPresentacio('index.html#comanda');
       return;
     }

@@ -30,7 +30,7 @@
 
       // Preu: PENDENT del pastor. `preu` és el valor intern (per lot, en euros); mentre `preuMostra` sigui true
       // la vista ensenya `etiquetaMostra`, sigui quin sigui el valor. Per posar el preu real: preu = 45,
-      // preuMostra = false. El lot es diu «lot de 5 kg» (`kg`) però les peces reals pesen 5,1 kg (`pesLot()`).
+      // preuMostra = false. El lot es diu «lot de 5 kg» (`kg`): el €/kg es calcula sobre 5 kg i els kg reals només van a la factura (`pesLot()` suma les peces: 5,1 kg).
       lot: {
         kg: 5,
         preu: 0,
@@ -61,25 +61,32 @@
         canal: { nom: 'Canal sencera', preu: 0, preuMostra: true, etiquetaMostra: '000 €', kg: 0, etiquetaPesMostra: 'Uns 000 kg', etiquetaPerKgMostra: '000 €/kg', ocupaPlaces: false, placesPerUnitat: 0, maxPerComanda: 10, pendent: true },
       },
 
-      // Tandes: un sol model (en Lluc, 01/11/2026 vespre), 26 lots amb data límit. Una tanda surt quan arriba a
-      // `places` o, com a molt tard, a la seva data límit, el que passi primer; si arriba la data sense 26, surt
-      // igualment (es confirma amb el pastor). `periodeSetmanes` és el temps entre dues dates límit consecutives
-      // (PENDENT del pastor; 4 és de mostra).
+      // Tandes: un sol model (en Lluc, 01/11/2026 vespre), 26 lots amb data límit. Una tanda surt a la data límit encara
+      // que no tingui els 26 lots (la gestiona el pastor); si s'omple abans, surt abans. `periodeSetmanes` és el temps
+      // entre dues dates límit consecutives: una tanda cada 2 setmanes (dada del client, 07/11/2026).
       tandes: {
         places: 26,
-        periodeSetmanes: 4,
-        periodePendent: true,
+        periodeSetmanes: 2,
+        periodePendent: false,
       },
 
-      // Enviament. El preu del producte és igual per a tothom; només l'enviament depèn del codi postal.
-      // Rodalies de Sort: gratis, ho reparteix el pastor mateix («repartiment-propi»). Només el 25560 (Sort) és segur;
-      // la resta de pobles de les rodalies, PENDENTS de confirmar amb ell: no s'hi afegeix cap codi per endevinar.
-      // La resta d'Espanya: transportista, de pagament (xifra de mostra `00 €`; tarifes per decidir).
-      // El nom del transportista no ha de sortir a la web pública: aquí només hi ha un marcador.
+      // Enviament (variant B del prototip, 07/11/2026). El preu del producte és igual per a tothom; només l'enviament
+      // depèn del codi postal, en tres zones:
+      //  1. `rodalies`: taula de pobles. El comprador tria «Recullo a Sort» (0 €) o «A casa» (preu del poble; el porta el
+      //     pastor amb vehicle refrigerat). Cada poble té la llista tancada dels seus CP (`cps`); un CP pot ser de diversos
+      //     pobles i llavors el full demana el poble. De moment només Sort; la resta, per al pastor (`pendentConfirmar`).
+      //     `problemesRodalies()` diu si la taula està trencada (la prova és a PLA-eines/proves-magatzem).
+      //  2. `catalunya`: la resta de CP que comencen per 08, 17, 25 o 43: preu fix per caixa (cost = caixes × preu).
+      //     `lotsPerCaixa` és de mostra, pendent del pastor.
+      //  3. Fora de Catalunya: no s'hi envia (el full diu el telèfon).
+      // Les xifres `mostra` ensenyen `etiquetaMostra` (`00 €`), sigui quin sigui el valor intern. El nom del
+      // transportista no surt mai a la web pública.
       enviament: {
-        rodalies: { nom: 'rodalies de Sort', cps: ['25560'], pendentConfirmar: true },
-        resta: { import: 0, mostra: true, etiquetaMostra: '00 €' },
-        transportista: { nom: '[TRANSPORTISTA]', pendentConfirmar: true },
+        rodalies: {
+          recollida: { nom: 'Sort', lloc: '[PENDENT: lloc exacte de la recollida a Sort]', horari: '[PENDENT: horari de la recollida]' },
+          pobles: [{ nom: 'Sort', cps: ['25560'], preuCasa: 0, preuMostra: true, etiquetaMostra: '00 €', pendentConfirmar: true }],
+        },
+        catalunya: { provincies: ['08', '17', '25', '43'], preuCaixa: 0, lotsPerCaixa: 1, mostra: true, etiquetaMostra: '00 €' },
       },
 
       // Dies entre que es tanca la tanda i l'entrega (variable {diesEntrega} de PLA-COPY.md). [PENDENT: pregunta 5 del
@@ -118,13 +125,13 @@
       // Enllaç al panell que porta el correu al pastor. `urlBase` és un marcador fins que hi hagi domini.
       panell: { urlBase: '[DOMINI]', ruta: '/panell/' },
 
-      // Subscripció: preparada però inactiva (només la proposta d'en Lluc; no és decisió del pastor).
-      // `activaPerDefecte` és l'únic lloc on el valor inicial es decideix; la UI no el pot canviar.
+      // Subscripció (en Lluc, 07/11/2026): activa, només per al lot, sense permanència. Cada 2, 4 o 8 setmanes (2 per
+      // defecte en encendre-la); es cobra quan es tanca la tanda; es pot aturar o saltar una tanda amb un enllaç fins a
+      // la data límit. `activaPerDefecte` és l'únic lloc on el valor inicial es decideix; la UI no el pot canviar.
       subscripcio: {
-        activaPerDefecte: false,
-        frequenciesSetmanes: [1, 2, 4, 8],
-        minimLotsPerDefecte: 3,
-        pendent: true,
+        activaPerDefecte: true,
+        frequenciesSetmanes: [2, 4, 8],
+        frequenciaPerDefecte: 2,
       },
 
       // Els correus es desen amb un identificador de plantilla i les dades; el text és a PLA-COPY.md.
@@ -142,6 +149,10 @@
         ],
       },
 
+      // Avisos de tanda nova (P45, art. 21.2 LSSI): s'avisa els compradors per correu tret que hagin marcat «No vull
+      // rebre aquests avisos». La comanda desa `avisosTanda` (true per defecte). Al full, just abans de «Continua».
+      avisosTanda: { frase: "T'avisarem per correu quan obri una tanda nova.", casella: 'No vull rebre aquests avisos' },
+
       // Llavor d'exemple (per a «Restablir dades»). TOT és fictici: noms «Exemple/Mostra/…», correus `.invalid`
       // (domini reservat, no pot ser de ningú) i telèfons que comencen per 000 (cap número espanyol hi comença).
       // Els codis postals són els de la capital de cada població. `fa` = dies d'antiguitat de la comanda;
@@ -158,15 +169,15 @@
           { tanda: 12, fa: 62, lots: 6, nom: 'Roser', cognoms: 'Exemple', email: 'roser@exemple.invalid', telefon: '000 000 013', adreca: 'Carrer de Mostra, 13', cp: '08301', poblacio: 'Mataró', notes: '' },
           { tanda: 12, fa: 58, lots: 5, nom: 'Pau', cognoms: 'Prova', email: 'pau@exemple.invalid', telefon: '000 000 014', adreca: 'Plaça Inventada, 14', cp: '08720', poblacio: 'Vilafranca del Penedès', notes: '' },
           { tanda: 12, fa: 55, lots: 6, nom: 'Mireia', cognoms: 'Mostra', email: 'mireia@exemple.invalid', telefon: '000 000 015', adreca: 'Carrer Fictici, 15', cp: '17001', poblacio: 'Girona', notes: '' },
-          { tanda: 12, fa: 52, lots: 5, nom: 'Jaume', cognoms: 'Demo', email: 'jaume@exemple.invalid', telefon: '000 000 016', adreca: 'Carrer Demo, 16', cp: '25560', poblacio: 'Sort', notes: '' },
+          { tanda: 12, fa: 52, lots: 5, nom: 'Jaume', cognoms: 'Demo', email: 'jaume@exemple.invalid', telefon: '000 000 016', adreca: 'Carrer Demo, 16', cp: '25560', poblacio: 'Sort', notes: '', mode: 'casa' },
           { tanda: 13, fa: 33, lots: 6, nom: 'Núria', cognoms: 'Exemple', email: 'nuria@exemple.invalid', telefon: '000 000 001', adreca: 'Carrer d’Exemple, 1, 2n 1a', cp: '08001', poblacio: 'Barcelona', notes: '' },
           { tanda: 13, fa: 30, lots: 5, nom: 'Jordi', cognoms: 'Mostra', email: 'jordi@exemple.invalid', telefon: '000 000 002', adreca: 'Carrer de Mostra, 2', cp: '17001', poblacio: 'Girona', notes: '' },
           { tanda: 13, fa: 27, lots: 4, nom: 'Pau', cognoms: 'Prova', email: 'pau@exemple.invalid', telefon: '000 000 014', adreca: 'Plaça Inventada, 14', cp: '08720', poblacio: 'Vilafranca del Penedès', notes: '' },
           { tanda: 13, fa: 24, lots: 7, nom: 'Marc', cognoms: 'Fictici', email: 'marc@exemple.invalid', telefon: '000 000 004', adreca: 'Carrer Fictici, 4', cp: '08201', poblacio: 'Sabadell', notes: 'Trucar abans de passar' },
-          { tanda: 13, fa: 20, lots: 4, nom: 'Sílvia', cognoms: 'Demo', email: 'silvia@exemple.invalid', telefon: '000 000 005', adreca: 'Carrer Demo, 5', cp: '25560', poblacio: 'Sort', notes: '' },
+          { tanda: 13, fa: 20, lots: 4, nom: 'Sílvia', cognoms: 'Demo', email: 'silvia@exemple.invalid', telefon: '000 000 005', adreca: 'Carrer Demo, 5', cp: '25560', poblacio: 'Sort', notes: '', mode: 'casa' },
           { tanda: 14, fa: 12, lots: 1, nom: 'Pere', cognoms: 'Inventat', email: 'pere@exemple.invalid', telefon: '000 000 006', adreca: 'Carrer Inventat, 6, 1r', cp: '08221', poblacio: 'Terrassa', notes: '' },
           { tanda: 14, fa: 10, lots: 2, nom: 'Marta', cognoms: 'Simulada', email: 'marta@exemple.invalid', telefon: '000 000 007', adreca: 'Avinguda Simulada, 7', cp: '43001', poblacio: 'Tarragona', notes: 'Deixar a consergeria' },
-          { tanda: 14, fa: 8, lots: 3, nom: 'Quim', cognoms: 'Exemple', email: 'quim@exemple.invalid', telefon: '000 000 008', adreca: 'Carrer d’Exemple, 8', cp: '25560', poblacio: 'Sort', notes: '' },
+          { tanda: 14, fa: 8, lots: 3, nom: 'Quim', cognoms: 'Exemple', email: 'quim@exemple.invalid', telefon: '000 000 008', adreca: 'Carrer d’Exemple, 8', cp: '25560', poblacio: 'Sort', notes: '', mode: 'casa' },
           { tanda: 14, fa: 6, lots: 2, nom: 'Anna', cognoms: 'Mostra', email: 'anna@exemple.invalid', telefon: '000 000 009', adreca: 'Carrer de Mostra, 9, àtic', cp: '08240', poblacio: 'Manresa', notes: '' },
           { tanda: 14, fa: 4, lots: 5, nom: 'Oriol', cognoms: 'Prova', email: 'oriol@exemple.invalid', telefon: '000 000 010', adreca: 'Camí de Prova, 10', cp: '25620', poblacio: 'Tremp', notes: '' },
           { tanda: 14, fa: 2, lots: 1, nom: 'Jordi', cognoms: 'Mostra', email: 'jordi@exemple.invalid', telefon: '000 000 002', adreca: 'Carrer de Mostra, 2', cp: '17001', poblacio: 'Girona', notes: '' },
@@ -197,29 +208,97 @@
       return d.panell.urlBase + d.panell.ruta + (comandaId ? '#comanda=' + comandaId : '');
     };
 
-    // Cost d'enviament per codi postal. `gratis` mana sobre `import`. `etiqueta` és el text d'import per a la vista
-    // (null si és gratis o el codi no és vàlid: la paraula «gratis» és copy). `mostra` = xifra de mostra.
-    // `lliurament`: 'repartiment-propi' (rodalies de Sort, el porta el pastor) o 'transportista'; null si el CP no és vàlid.
-    d.costEnviament = function (cp) {
+    // Pobles de les rodalies que tenen aquest CP (un CP pot ser de diversos pobles). Cada un: { nom, import, etiqueta, mostra }.
+    d.poblesDeCP = function (cp) {
+      const net = String(cp === undefined || cp === null ? '' : cp).replace(/\s+/g, '');
+      return d.enviament.rodalies.pobles
+        .filter((p) => p.cps.includes(net))
+        .map((p) => ({ nom: p.nom, import: p.preuCasa, etiqueta: p.preuMostra ? p.etiquetaMostra : d.formatEuros(p.preuCasa), mostra: !!p.preuMostra }));
+    };
+
+    // Zona d'un CP vàlid: 'rodalies' (és a la taula), 'catalunya' (08, 17, 25, 43) o 'fora'. null si el CP no és vàlid.
+    d.zonaDeCP = function (cp) {
       const v = d.validaCP(cp);
-      if (!v.valid) {
-        return { valid: false, cp: v.cp, motiu: v.motiu, zona: null, lliurament: null, gratis: false, import: null, etiqueta: null, mostra: false };
+      if (!v.valid) return null;
+      if (d.poblesDeCP(v.cp).length) return 'rodalies';
+      return d.enviament.catalunya.provincies.includes(v.cp.slice(0, 2)) ? 'catalunya' : 'fora';
+    };
+
+    // Cost d'enviament per codi postal (variant B del prototip). `opcions`: { mode: 'recollida' | 'casa', poble, lots }.
+    //  - rodalies: sense `mode` no hi ha cost (`cal: 'mode'`); 'recollida' = 0 € i `lliurament: 'recull'`; 'casa' = preu del
+    //    poble i `lliurament: 'repartiment-propi'`; si el CP és de diversos pobles i no se'n dóna cap, `cal: 'poble'`.
+    //  - catalunya: caixes = ceil(lots / lotsPerCaixa); import = caixes × preu per caixa; `lliurament: 'transportista'`
+    //    (el nom del transportista no surt mai a la web).
+    //  - fora: `enviable: false`, sense cost (`lliurament: null`).
+    // `complet` = hi ha un cost definitiu (el full ja pot continuar). `gratis` mana sobre `import`; `etiqueta` és el text
+    // d'import per a la vista (null si és gratis, si no és complet o si el CP no és vàlid). `mostra` = xifra de mostra.
+    d.costEnviament = function (cp, opcions) {
+      const o = opcions || {};
+      const base = { valid: false, cp: null, motiu: null, zona: null, enviable: false, complet: false, cal: null, lliurament: null, mode: null, poble: null, pobles: [], caixes: null, gratis: false, import: null, etiqueta: null, mostra: false };
+      const v = d.validaCP(cp);
+      if (!v.valid) return Object.assign(base, { cp: v.cp, motiu: v.motiu });
+      const zona = d.zonaDeCP(v.cp);
+      const r = Object.assign(base, { valid: true, cp: v.cp, zona });
+      if (zona === 'fora') return r;
+      r.enviable = true;
+      if (zona === 'catalunya') {
+        const c = d.enviament.catalunya;
+        const caixes = Math.max(1, Math.ceil(Number(o.lots || 1) / c.lotsPerCaixa));
+        return Object.assign(r, { complet: true, lliurament: 'transportista', caixes, import: caixes * c.preuCaixa, etiqueta: c.mostra ? c.etiquetaMostra : d.formatEuros(caixes * c.preuCaixa), mostra: !!c.mostra });
       }
-      if (d.enviament.rodalies.cps.includes(v.cp)) {
-        return { valid: true, cp: v.cp, motiu: null, zona: 'rodalies', lliurament: 'repartiment-propi', gratis: true, import: 0, etiqueta: null, mostra: false };
-      }
-      const r = d.enviament.resta;
-      return {
-        valid: true,
-        cp: v.cp,
-        motiu: null,
-        zona: 'resta',
-        lliurament: 'transportista',
-        gratis: false,
-        import: r.import,
-        etiqueta: r.mostra ? r.etiquetaMostra : d.formatEuros(r.import),
-        mostra: !!r.mostra,
-      };
+      // Rodalies
+      r.pobles = d.poblesDeCP(v.cp);
+      if (o.mode !== 'recollida' && o.mode !== 'casa') return Object.assign(r, { cal: 'mode' });
+      r.mode = o.mode;
+      if (o.mode === 'recollida') return Object.assign(r, { complet: true, lliurament: 'recull', gratis: true, import: 0 });
+      const triat = r.pobles.length === 1 ? r.pobles[0] : r.pobles.find((p) => p.nom === o.poble);
+      if (!triat) return Object.assign(r, { cal: 'poble' });
+      return Object.assign(r, { complet: true, lliurament: 'repartiment-propi', poble: triat.nom, import: triat.import, etiqueta: triat.etiqueta, mostra: triat.mostra });
+    };
+
+    // Problemes de la taula de rodalies (llista de textos; buida = tot bé): un poble sense CP, un CP no vàlid o fora de
+    // Catalunya, un CP repetit dins d'un poble, un nom repetit, un preu que no és un número i un CP de diversos pobles
+    // amb preus diferents que el codi no resolgui demanant el poble. Es pot passar una altra taula (les proves).
+    d.problemesRodalies = function (pobles) {
+      const taula = pobles || d.enviament.rodalies.pobles;
+      const problemes = [];
+      const noms = new Set();
+      const perCP = {};
+      taula.forEach((p, i) => {
+        const nom = p && p.nom ? p.nom : '(poble ' + (i + 1) + ' sense nom)';
+        if (!p || !p.nom) problemes.push(nom);
+        if (noms.has(nom)) problemes.push('El poble «' + nom + '» està repetit.');
+        noms.add(nom);
+        if (!p || !Array.isArray(p.cps) || !p.cps.length) {
+          problemes.push('El poble «' + nom + '» no té cap codi postal.');
+          return;
+        }
+        if (!Number.isFinite(p.preuCasa) || p.preuCasa < 0) problemes.push('El poble «' + nom + '» no té un preu vàlid.');
+        const vistos = new Set();
+        p.cps.forEach((cp) => {
+          const v = d.validaCP(cp);
+          if (!v.valid || v.cp !== String(cp)) problemes.push('El codi postal «' + cp + '» del poble «' + nom + '» no és vàlid.');
+          else if (!d.enviament.catalunya.provincies.includes(v.cp.slice(0, 2))) problemes.push('El codi postal ' + cp + ' del poble «' + nom + '» no és de Catalunya.');
+          if (vistos.has(cp)) problemes.push('El codi postal ' + cp + ' està repetit al poble «' + nom + '».');
+          vistos.add(cp);
+          (perCP[cp] = perCP[cp] || []).push(p);
+        });
+      });
+      // Un CP de diversos pobles amb preus diferents: el cost sense poble ha de ser «falta triar el poble»
+      Object.keys(perCP).forEach((cp) => {
+        const llista = perCP[cp];
+        if (llista.length < 2 || new Set(llista.map((p) => p.preuCasa)).size < 2) return;
+        const original = d.enviament.rodalies.pobles;
+        let r;
+        try {
+          d.enviament.rodalies.pobles = taula;
+          r = d.costEnviament(cp, { mode: 'casa' });
+        } finally {
+          d.enviament.rodalies.pobles = original;
+        }
+        if (!(r.cal === 'poble' && !r.complet)) problemes.push('El codi postal ' + cp + ' és de diversos pobles amb preus diferents i el codi no demana el poble.');
+      });
+      return problemes;
     };
 
     d.preuLots = function (lots) {
@@ -258,10 +337,10 @@
       return { import: perKg, etiqueta: d.lot.preuMostra ? d.lot.etiquetaPerKgMostra : d.formatEuros(perKg) + '/kg', mostra: !!d.lot.preuMostra };
     };
 
-    // Desglossament del full de compra: producte + enviament = total. Sense codi postal vàlid, enviament i total són null.
+    // Desglossament del full de compra: producte + enviament = total. Mentre l'enviament no és definitiu (CP no vàlid, fora de Catalunya o falta triar recollida/casa o poble), enviament i total són null. `opcions` com a `costEnviament`.
     // Si el producte no ocupa places (canals, per defecte) l'entrega és «per acordar»: `entregaPerAcordar:true` i
     // enviament i total són null (no hi ha càlcul). `lots` i `etiquetes.lots` són les unitats i l'import del producte.
-    d.desglossament = function (lots, cp, producte) {
+    d.desglossament = function (lots, cp, producte, opcions) {
       const id = producte || 'lot';
       const nLots = Number(lots);
       const pl = d.preuProducte(id, nLots);
@@ -283,7 +362,7 @@
           etiquetes: { lots: pl.etiqueta, enviament: null, total: null },
         };
       }
-      const env = d.costEnviament(cp);
+      const env = d.costEnviament(cp, Object.assign({ lots: nLots }, opcions));
       const mostra = pl.mostra || env.mostra;
       const res = {
         producte: id,
@@ -292,16 +371,19 @@
         kgReals: id === 'lot' ? nLots * d.pesLot().kgReals : null,
         entregaPerAcordar: false,
         cpValid: env.valid,
+        complet: env.complet,
+        cal: env.cal,
+        enviable: env.enviable,
         zona: env.zona,
         lliurament: env.lliurament,
         gratis: env.gratis,
         mostra,
         importLots: pl.import,
-        importEnviament: env.valid ? env.import : null,
-        total: env.valid ? pl.import + env.import : null,
+        importEnviament: env.complet ? env.import : null,
+        total: env.complet ? pl.import + env.import : null,
         etiquetes: { lots: pl.etiqueta, enviament: null, total: null },
       };
-      if (env.valid) {
+      if (env.complet) {
         res.etiquetes.enviament = env.etiqueta;
         res.etiquetes.total = mostra ? p.etiquetaMostra || d.lot.etiquetaMostra : d.formatEuros(res.total);
       }

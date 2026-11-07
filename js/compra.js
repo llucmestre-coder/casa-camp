@@ -22,7 +22,9 @@
   const camps = ['nom', 'cognoms', 'telefon', 'email', 'adreca', 'cp', 'poblacio'];
   const el = (id) => document.getElementById(id);
 
-  const S = { producte: 'lot', lots: 1, opener: null };
+  // `mode` ('recollida' | 'casa') i `poble`: l'enviament a les rodalies, res triat d'entrada. `sub`: la subscripció, apagada
+  // d'entrada. `noAvis`: la casella de la P45 (desmarcada).
+  const S = { producte: 'lot', lots: 1, opener: null, mode: null, poble: null, sub: { on: false, freq: D.subscripcio.frequenciaPerDefecte }, noAvis: false, cpAnterior: '', poblacioAuto: '' };
 
   const aPart = () => !D.productes[S.producte].ocupaPlaces;
   const maxLots = () => (S.producte === 'lot' ? M.maxLotsPerComanda('lot') || M.placesPerTanda() : 1);
@@ -99,10 +101,98 @@
     return `En aquesta tanda ${cap} i en demanes ${S.lots}. ${C.fraseTandaSeguent(a.dataLimit)}`;
   }
 
+  const opcionsEnviament = () => ({ mode: S.mode, poble: S.poble, lots: S.lots });
+  // Recollida a Sort (zona de Sort): el full no demana l'adreça ni les notes d'entrega
+  const recollidaSort = () => !aPart() && S.mode === 'recollida' && D.zonaDeCP(el('f-cp').value) === 'rodalies';
+
   function etiquetes() {
-    const r = C.resumCompra(S.producte, S.lots, el('f-cp').value);
+    const r = C.resumCompra(S.producte, S.lots, el('f-cp').value, opcionsEnviament());
     r.concepte = S.producte === 'lot' ? `Lots (${S.lots} × ${r.unitari})` : NOMS_CANAL[S.producte];
     return r;
+  }
+
+  /* ---------- Enviament segons el codi postal (variant B del prototip, 07/11/2026) ---------- */
+
+  const TXT_TRUCA = `De moment no enviem fora de Catalunya. Truca’ns al <a href="${TEL_HREF}">${esc(TEL)}</a> i en parlem.`;
+
+  // Les tres sortides: rodalies (interruptor «Recullo a Sort | A casa» i, si el CP és de diversos pobles, píndoles amb el
+  // preu a dins), resta de Catalunya (una frase amb el preu) i fora (frase amb el telèfon).
+  function htmlEnviament() {
+    const cp = el('f-cp').value;
+    const env = D.costEnviament(cp, opcionsEnviament());
+    if (!env.valid) return cp.trim() === '' ? '<p class="nota">Posa el codi postal i et diem què costa portar-te-ho.</p>' : '';
+    if (!env.enviable) return `<p class="nota entra">${TXT_TRUCA}</p>`;
+    if (env.zona === 'catalunya') return `<p class="nota entra">Enviem a tota Catalunya, en fred, a <strong>${esc(env.etiqueta)} per caixa</strong>.</p>`;
+    const rec = D.enviament.rodalies.recollida;
+    const radio = (valor, text) => `<label><input type="radio" name="env-mode" value="${valor}"${S.mode === valor ? ' checked' : ''}>${text}</label>`;
+    let h = `<div class="entra"><div class="segment" role="radiogroup" aria-label="Com vols rebre el lot">${radio('recollida', 'Recullo a ' + esc(rec.nom))}${radio('casa', 'A casa')}</div>`;
+    if (S.mode === 'recollida') {
+      h += `<p class="nota"><strong>Sense cost.</strong> ${esc(rec.lloc)} · ${esc(rec.horari)}</p>`;
+    } else if (S.mode === 'casa') {
+      if (env.pobles.length > 1) {
+        h += `<fieldset class="pindoles"><legend class="legend-p">Quin poble?</legend>${env.pobles.map((p) => `<label class="pindola"><input type="radio" name="env-poble" value="${esc(p.nom)}"${S.poble === p.nom ? ' checked' : ''}>${esc(p.nom)}<small>${esc(p.etiqueta)}</small></label>`).join('')}</fieldset>`;
+      }
+      h += '<p class="nota">Te’l portem nosaltres, en fred, amb un preu fix per poble.</p>';
+    } else {
+      h += '<p class="nota">Tria com vols rebre el lot per poder continuar.</p>';
+    }
+    return h + '</div>';
+  }
+
+  // Repinta una caixa només si l'HTML ha canviat, i el focus (si hi era dins) torna al mateix control
+  function repinta(caixa, h) {
+    if (caixa.dataset.h === h) return;
+    const a = document.activeElement;
+    const clau = a && caixa.contains(a) && a.name ? [a.name, a.value] : null;
+    caixa.dataset.h = h;
+    caixa.innerHTML = h;
+    if (clau) {
+      const nou = Array.from(caixa.querySelectorAll('input')).find((i) => i.name === clau[0] && i.value === clau[1]);
+      if (nou) nou.focus({ focusVisible: true });
+    }
+  }
+
+  // L'adreça i les notes només surten quan ens han de portar la comanda: a casa (rodalies) o a la resta de Catalunya
+  // (i, per a les canals, a qualsevol codi postal de Catalunya). Primer va el codi postal i la tria d'enviament.
+  function adrecaVisible() {
+    const e = D.costEnviament(el('f-cp').value, opcionsEnviament());
+    if (!e.valid || !e.enviable) return false;
+    return aPart() || e.zona === 'catalunya' || S.mode === 'casa';
+  }
+
+  function renderEnviament() {
+    const env = D.costEnviament(el('f-cp').value, opcionsEnviament());
+    repinta(el('env-tria'), aPart() ? (env.valid && !env.enviable ? `<p class="nota entra">${TXT_TRUCA}</p>` : '') : htmlEnviament());
+    // «Continua»: desactivat fins que es tria (rodalies) i, fora de Catalunya, passa a «Truca’ns»
+    const fora = env.valid && !env.enviable;
+    const falta = !aPart() && env.valid && env.enviable && !env.complet;
+    el('continua').hidden = fora;
+    el('truca').hidden = !fora;
+    el('continua').disabled = falta;
+    el('avis-tanda').hidden = fora;
+    const sense = !adrecaVisible();
+    el('camp-adreca').hidden = sense;
+    el('camp-notes').hidden = sense;
+    if (sense) posaError('adreca', null);
+  }
+
+  /* ---------- Subscripció (variant B del prototip): només per al lot, apagada d'entrada ---------- */
+
+  function renderSubscripcio() {
+    const caixa = el('sub-b');
+    const hi = S.producte === 'lot' && M.subscripcioActiva();
+    caixa.hidden = !hi;
+    if (!hi) return;
+    const on = S.sub.on;
+    const f = S.sub.freq;
+    caixa.classList.toggle('on', on);
+    el('sub-on').checked = on;
+    el('sub-text').textContent = `T’apartem ${S.lots === 1 ? 'un lot' : S.lots + ' lots'} cada ${f} setmanes. ${S.lots === 1 ? 'El primer el pagues ara' : 'El primer cop els pagues ara'}; els següents te’ls cobrem quan es tanca cada tanda. Ho pots aturar quan vulguis.`;
+    el('sub-detall').hidden = !on;
+    if (!on) return;
+    repinta(el('sub-freq'), D.subscripcio.frequenciesSetmanes.map((v) => `<label class="pindola"><input type="radio" name="sub-freq" value="${v}"${f === v ? ' checked' : ''}>${v} setmanes</label>`).join(''));
+    const r = M.properesEntregues(f, S.lots, 3);
+    el('sub-dates').innerHTML = r.ok ? `Les properes tandes es tanquen: <strong>${r.entregues.map((x) => esc(C.dataMini(x.dataLimit))).join(' · ')}</strong>` : '';
   }
 
   function render() {
@@ -121,7 +211,22 @@
     if (alMaxim) el('q-max').textContent = `En una comanda hi caben com a màxim ${maxLots()} lots.`;
     el('q-tanda').textContent = liniaTanda();
     el('q-canvi').hidden = lot;
+    renderSubscripcio();
     renderDesglos();
+  }
+
+  // Amb el lot recurrent encès, sota el total: què es paga avui i què es cobrarà a cada tanda següent
+  function liniaRecurrent(e) {
+    let p = el('d-recurrent');
+    if (!p) {
+      p = document.createElement('p');
+      p.id = 'd-recurrent';
+      p.className = 'nota-recurrent';
+      el('desglos').appendChild(p);
+    }
+    const hi = S.producte === 'lot' && M.subscripcioActiva() && S.sub.on && !!e.total && !aPart();
+    p.hidden = !hi;
+    p.textContent = hi ? `Avui pagues ${e.total}. A cada tanda següent, ${e.total} (${C.lots(S.lots)}${e.env.lliurament === 'recull' ? '' : ' + enviament'}).` : '';
   }
 
   // `mode`: 'suau' (només la xifra, quan canvia la quantitat) o 'balanca' (l'enviament i el total, quan el codi postal és complet)
@@ -135,13 +240,26 @@
       // «Per acordar» és text nou (no és a PLA-COPY.md); la nota és la de PLA-COPY.md §4.8
       env = 'Per acordar';
       nota = 'Et trucarem per quedar el dia que te la portem.';
+      if (e.env.valid && !e.env.enviable) { env = 'No s’hi envia'; nota = ''; }
     } else if (e.env.valid) {
-      env = e.env.gratis ? 'Gratis' : e.env.etiqueta;
-      nota = e.env.gratis ? 'Te la portem nosaltres mateixos, sense cap cost.' : 'Te la porta un transportista, refrigerada.';
+      if (!e.env.enviable) {
+        env = 'No s’hi envia';
+      } else if (!e.env.complet) {
+        env = '—'; // la frase que diu què falta triar és al costat de la tria, no aquí
+      } else if (e.env.lliurament === 'recull') {
+        env = '0 €';
+      } else if (e.env.lliurament === 'repartiment-propi') {
+        env = e.env.etiqueta;
+      } else {
+        env = e.env.etiqueta;
+        nota = e.env.caixes > 1 ? `Te’l portem en ${e.env.caixes} caixes.` : '';
+      }
     }
     Moviment.text(el('d-env'), env, mode);
-    Moviment.text(el('d-total'), e.total || '—', mode);
+    Moviment.text(el('d-total'), (aPart() && e.env.valid && !e.env.enviable ? null : e.total) || '—', mode);
+    liniaRecurrent(e);
     el('d-nota').textContent = nota;
+    renderEnviament();
   }
 
   el('q-menys').addEventListener('click', () => {
@@ -175,15 +293,15 @@
     cognoms: el('f-cognoms').value,
     telefon: el('f-telefon').value,
     email: el('f-email').value,
-    adreca: el('f-adreca').value,
+    adreca: recollidaSort() ? '' : el('f-adreca').value,
     cp: el('f-cp').value,
     poblacio: el('f-poblacio').value,
-    notes: el('f-notes').value,
+    notes: recollidaSort() ? '' : el('f-notes').value,
   });
 
   function erroresClient() {
     const v = valorsClient();
-    const r = M.validaClient(v);
+    const r = M.validaClient(v, { sensAdreca: !adrecaVisible() });
     const errors = Object.assign({}, r.errors);
     if (!v.cognoms.trim()) errors.cognoms = 'buit';
     return errors;
@@ -211,9 +329,57 @@
     input.addEventListener('input', () => {
       if (input.closest('.camp').classList.contains('amb-error') && !erroresClient()[c]) posaError(c, null);
       if (c === 'cp') {
+        // Un altre codi postal = una altra tria d'enviament: es torna a començar (res triat d'entrada)
+        const net = input.value.replace(/\s+/g, '');
+        if (net !== S.cpAnterior) {
+          S.cpAnterior = net;
+          S.mode = null;
+          S.poble = null;
+        }
+        ajustaPoblacio();
         renderDesglos('balanca');
       }
     });
+  });
+
+  // La població de les rodalies s'omple sola (i només si el comprador no hi ha escrit res d'ell)
+  function ajustaPoblacio() {
+    const env = D.costEnviament(el('f-cp').value, opcionsEnviament());
+    const p = env.zona === 'rodalies' ? env.poble || (env.pobles.length === 1 ? env.pobles[0].nom : '') : '';
+    const camp = el('f-poblacio');
+    if (p && (camp.value.trim() === '' || camp.value === S.poblacioAuto)) {
+      camp.value = p;
+      S.poblacioAuto = p;
+    } else if (!p && S.poblacioAuto && camp.value === S.poblacioAuto) {
+      // Un altre codi postal: el poble que s'havia posat sol ja no hi val
+      camp.value = '';
+      S.poblacioAuto = '';
+    }
+  }
+
+  // Enviament, avisos i subscripció (tot canvia el desglossament; res no es desa fins a pagar)
+  el('env-tria').addEventListener('change', (e) => {
+    if (e.target.name === 'env-mode') {
+      S.mode = e.target.value;
+      if (S.mode === 'recollida') S.poble = null;
+    } else if (e.target.name === 'env-poble') {
+      S.poble = e.target.value;
+    } else return;
+    ajustaPoblacio();
+    renderDesglos('balanca');
+  });
+  el('sub-on').addEventListener('change', (e) => {
+    S.sub.on = e.target.checked;
+    renderSubscripcio();
+    liniaRecurrent(etiquetes());
+  });
+  el('sub-freq').addEventListener('change', (e) => {
+    if (e.target.name !== 'sub-freq') return;
+    S.sub.freq = Number(e.target.value);
+    renderSubscripcio();
+  });
+  el('f-no-avisos').addEventListener('change', (e) => {
+    S.noAvis = e.target.checked;
   });
 
   el('continua').addEventListener('click', () => {
@@ -249,7 +415,9 @@
       senseWeb('De moment, les comandes per telèfon', 'Encara no cobrem per la web. Truca’ns i digues-nos què vols.');
       return;
     }
-    const ok = C.comandaEnCurs.desa({ producte: S.producte, lots: S.lots, client: valorsClient() });
+    // La subscripció només va amb el lot, i només si està encesa; la P45 (avisos de tanda nova) va amb la comanda
+    const subscripcio = S.producte === 'lot' && S.sub.on && M.subscripcioActiva() ? { frequenciaSetmanes: S.sub.freq } : null;
+    const ok = C.comandaEnCurs.desa({ producte: S.producte, lots: S.lots, client: valorsClient(), enviament: aPart() ? null : { mode: S.mode, poble: S.poble }, subscripcio, avisosTanda: !S.noAvis });
     if (!ok) {
       senseWeb('Aquest navegador no ens deixa continuar', 'Per acabar la comanda, truca’ns i te la prenem per telèfon.');
       return;
@@ -266,6 +434,12 @@
     camps.concat('notes').forEach((k) => {
       if (c.client[k] !== undefined) el('f-' + k).value = c.client[k];
     });
+    S.cpAnterior = String(c.client.cp || '').replace(/\s+/g, '');
+    S.mode = c.enviament ? c.enviament.mode : null;
+    S.poble = c.enviament ? c.enviament.poble : null;
+    S.sub = { on: !!c.subscripcio, freq: c.subscripcio ? c.subscripcio.frequenciaSetmanes : D.subscripcio.frequenciaPerDefecte };
+    S.noAvis = c.avisosTanda === false;
+    el('f-no-avisos').checked = S.noAvis;
     obre(c.producte, null, c.lots);
   }
 
