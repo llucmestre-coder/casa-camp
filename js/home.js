@@ -25,8 +25,8 @@
     el('l-preu-kg').textContent = D.preuPerKg().etiqueta;
     ['mitja-canal', 'canal'].forEach((id) => {
       el('c-pes-' + id).textContent = D.pesCanal(id);
+      el('c-preu-kg-' + id).textContent = D.preuPerKgCanal(id);
     });
-    mida();
     el('l-llista').innerHTML = D.peces.map((p) => `<li><span>${C.esc(p.nom)}</span><span>${kgPeça(p.grams)}</span></li>`).join('');
   }
 
@@ -48,17 +48,6 @@
   }
   el('l-menys').addEventListener('click', () => quantitat(-1));
   el('l-mes').addEventListener('click', () => quantitat(1));
-
-  // Selector de mida de la fitxa de les canals: canvia el preu i el botó, que obre el full amb aquell producte
-  const TEXT_BOTO = { 'mitja-canal': 'Demana mitja canal', canal: 'Demana una canal sencera' };
-  function mida() {
-    const id = document.querySelector('input[name="c-mida"]:checked').value;
-    el('c-preu').textContent = D.preuProducte(id, 1).etiqueta;
-    el('c-preu-kg').textContent = D.preuPerKgCanal(id);
-    Moviment.text(el('c-demana'), TEXT_BOTO[id], 'balanca');
-    el('c-demana').dataset.obreFull = id;
-  }
-  $$('input[name="c-mida"]').forEach((r) => r.addEventListener('change', mida));
 
   // La barra de la tanda, en un tram per lot (js/moviment.js)
   function barra(id, o) {

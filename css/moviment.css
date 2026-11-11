@@ -36,19 +36,6 @@ body.full-obert .full{transition:transform calc(.32s * var(--tempo)) var(--corba
 .mv-x{display:inline-block;white-space:nowrap}   /* la xifra que canvia (es mou sola dins de la frase) */
 .mv-text{display:inline-block}                   /* el text d'un botó que canvia */
 
-/* ---------- C · Mitja o sencera ----------
-   La càpsula (abans, el fons de l'opció marcada) és ara un pseudoelement de la fila: l'estat final el posa el CSS i
-   el JS només la fa lliscar. La fila de la llista que correspon es marca (color) alhora. */
-.c-mida{position:relative;isolation:isolate}
-.c-mida::before{content:"";position:absolute;z-index:-1;top:4px;bottom:4px;left:4px;width:calc((100% - 12px) / 2);border-radius:999px;background:var(--cta)}
-.c-mida:has(input[value="canal"]:checked)::before{transform:translateX(calc(100% + 4px))}
-.c-mida input:checked+span{background:transparent;color:var(--sobre-cta)}
-.c-mida span{transition:color calc(220ms * var(--tempo))}
-@media (hover:hover){.c-mida input:checked+span:hover{background:transparent}}
-#canals .l-llista li span{transition:color calc(220ms * var(--tempo))}
-#canals:has(input[value="mitja-canal"]:checked) .l-llista li:nth-child(1) span,
-#canals:has(input[value="canal"]:checked) .l-llista li:nth-child(2) span{color:var(--accent)}
-
 /* ---------- D · Preguntes ----------
    El + és ara dues barres: en obrir, gira mitja volta i la vertical es tanca (queda el −). L'alçada de la resposta
    la mou el JS. .mv-tanca = s'està tancant (la icona ja torna a +). */

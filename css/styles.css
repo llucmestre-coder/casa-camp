@@ -164,13 +164,11 @@ h2{font-weight:var(--pes-titol);font-size:var(--t-h2);line-height:1.08;margin:0}
 /* ---------- Canals: fitxa de compra amb selector de mida (03/11/2026). Fa servir la graella i les peces del lot
    (.lot-graella, .l-*); aquí només hi ha el filet de separació i el selector. ---------- */
 .canals{border-top:1px solid var(--linia)}
-.c-mida{display:grid;grid-template-columns:1fr 1fr;gap:4px;margin:0;padding:4px;border:0;background:var(--tria);border-radius:999px}
-.c-mida label{position:relative;display:block;cursor:pointer}
-.c-mida input{position:absolute;inset:0;margin:0;opacity:0;cursor:pointer}
-.c-mida span{display:flex;align-items:center;justify-content:center;min-height:44px;padding:0 .6rem;border-radius:999px;font:var(--pes-sub) .94rem/1.1 var(--f-titol);text-align:center;color:var(--cta)}
-.c-mida input:checked+span{background:var(--cta);color:var(--sobre-cta)}
-.c-mida input:focus-visible+span{outline:3px solid var(--accent);outline-offset:2px}
-@media (hover:hover){.c-mida input:not(:checked)+span:hover{background:var(--superficie)}}
+.c-preus{list-style:none;margin:0;padding:0}
+.c-preus li{display:flex;justify-content:space-between;align-items:baseline;gap:1rem;padding:.35rem 0}
+.c-preus li+li{border-top:1px solid var(--linia)}
+.c-preus strong{font:var(--pes-titol) 1.5rem/1.1 var(--f-titol);letter-spacing:var(--track)}
+.c-text{margin:.7rem 0 0;color:var(--text-2)}
 
 /* ---------- Segell ecològic i preguntes ----------
    Preguntes: títol a dalt i llista a sota, en una columna que comença al marge esquerre (en Lluc, 07/11/2026) */

@@ -115,8 +115,8 @@
 </section>
 
 <section class="canals" id="canals" aria-labelledby="canals-titol">
-  <!-- Fitxa de compra de les canals (en Lluc, 03/11/2026: una fitxa amb selector, el mateix esquema que la del lot; PLA.md §«Fitxa de compra de les canals») -->
-  <!-- PENDENT: pes aproximat de cada canal, com s'entrega (sencera o tallada a peces) i si va per tandes (pregunta 16 del pastor) -->
+  <!-- Fitxa de les canals (en Lluc, 11/11/2026): no es compren a la web. El pastor dona el preu segons el que vol el comprador; la fitxa ensenya el preu per kg de cada mida i els botons per trucar o escriure per WhatsApp -->
+  <!-- PENDENT (pastor): pes aproximat i preu per kg de cada canal -->
   <div class="lot-graella">
     <figure class="l-foto">
       <!-- FOTO REAL PENDENT: com t'arriba la canal (stock d'Unsplash, Sergey Kotenev, carn-taula-fusta.jpg; veure PLA-eines/stock/FONTS.md) -->
@@ -134,21 +134,19 @@
       <p class="l-nota">Pesos aproximats: cada vedella és diferent.</p>
     </div>
     <div class="l-caixa">
-      <p class="l-preu"><strong id="c-preu">000 €</strong><span id="c-preu-kg">000 €/kg</span></p>
+      <ul class="c-preus">
+        <li><span>Mitja canal</span><strong id="c-preu-kg-mitja-canal">000 €/kg</strong></li>
+        <li><span>Canal sencera</span><strong id="c-preu-kg-canal">000 €/kg</strong></li>
+      </ul>
+      <p class="c-text">El preu final depèn del pes. Explica'ns què vols i com ho vols, i et diem quant val.</p>
       <div class="l-compra">
-        <fieldset class="c-mida">
-          <legend class="sr-nomes">Mida</legend>
-          <label><input type="radio" name="c-mida" value="mitja-canal" checked><span>Mitja canal</span></label>
-          <label><input type="radio" name="c-mida" value="canal"><span>Canal sencera</span></label>
-        </fieldset>
-        <button type="button" class="boto" id="c-demana" data-obre-full="mitja-canal">Demana mitja canal</button>
+        <a class="boto" href="tel:+34646455128">Truca al 646 455 128</a>
+        <a class="boto boto-sec" href="https://wa.me/34646455128?text=Hola%2C%20voldria%20informaci%C3%B3%20sobre%20una%20canal%20de%20vedella." target="_blank" rel="noopener">Escriu per WhatsApp</a>
       </div>
     </div>
     <dl class="l-info">
-      <!-- PENDENT (pregunta 16 del pastor): com s'entrega de debò. «Tallada a peces i envasada» és de mostra -->
-      <div><dt>Com t'arriba</dt><dd>Tallada a peces i envasada, en fred.</dd></div>
-      <div><dt>Entrega</dt><dd>Només a Catalunya. No va per tandes: s'envia a part, sense esperar cap data. El dia i l'enviament els acordem amb tu quan ens arriba la comanda.</dd></div>
-      <div><dt>Pagament</dt><dd>Targeta, Apple Pay o Google Pay.</dd></div>
+      <div><dt>Com t'arriba</dt><dd>Com la vulguis, en fred. Ho parlem quan ens truquis o ens escriguis.</dd></div>
+      <div><dt>Entrega</dt><dd>Només a Catalunya. No va per tandes: s'envia a part, sense esperar cap data. El dia i l'enviament els acordem amb tu.</dd></div>
     </dl>
   </div>
 </section>
@@ -164,7 +162,7 @@
   <div class="faq-llista" id="faq-llista">
     <!-- PENDENT: el motiu en paraules del pastor; p. ex., si una tanda correspon a una vedella (pregunta 4) -->
     <details id="faq-tandes"><summary>Com funcionen les tandes?</summary><p data-places>Ajuntem les comandes en tandes de 26 lots i les preparem i enviem totes alhora. Obrim una tanda cada 2 setmanes. Cada tanda es tanca quan s'omple o, com a molt tard, el dia de la data límit, i surt igualment encara que no sigui plena.</p></details>
-    <details><summary>Les canals també van per tandes?</summary><p>No. Les canals i les mitges canals s'envien a part, sense esperar cap data, i només a Catalunya: quan ens arriba la comanda, acordem amb tu el dia.</p></details>
+    <details><summary>Les canals també van per tandes?</summary><p>No. Les canals i les mitges canals s'envien a part, sense esperar cap data, i només a Catalunya: quan ens truques o ens escrius, acordem amb tu el dia.</p></details>
     <details><summary>Per què es paga per avançat?</summary><p>Així sabem quants lots hem de preparar per a cada tanda. Si tens dubtes, truca'ns abans de pagar.</p></details>
     <details><summary>Quan m'arribarà?</summary><p data-dies>Quan es tanca la tanda, la preparem i te l'enviem: la tens a casa, o a punt per recollir a Sort, uns 00 dies després. El dia que la comanda surt, t'escrivim amb el dia exacte.</p></details>
     <!-- PENDENT: quins pobles tenen entrega a casa i el preu de cada un; el preu per caixa i quants lots hi caben (per al pastor) -->

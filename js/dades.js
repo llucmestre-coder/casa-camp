@@ -57,8 +57,10 @@
       // `maxPerComanda`: null = el que càpiga en una tanda (només per als que ocupen places).
       productes: {
         lot: { nom: 'Lot de 5 kg', ocupaPlaces: true, placesPerUnitat: 1, maxPerComanda: null },
-        'mitja-canal': { nom: 'Mitja canal', preu: 0, preuMostra: true, etiquetaMostra: '000 €', kg: 0, etiquetaPesMostra: 'Uns 000 kg', etiquetaPerKgMostra: '000 €/kg', ocupaPlaces: false, placesPerUnitat: 0, maxPerComanda: 10, pendent: true },
-        canal: { nom: 'Canal sencera', preu: 0, preuMostra: true, etiquetaMostra: '000 €', kg: 0, etiquetaPesMostra: 'Uns 000 kg', etiquetaPerKgMostra: '000 €/kg', ocupaPlaces: false, placesPerUnitat: 0, maxPerComanda: 10, pendent: true },
+        // Canals (en Lluc, 11/11/2026): no es compren a la web; el pastor dona el preu per telèfon o WhatsApp. La fitxa
+        // ensenya `preuKg` (PENDENT del pastor; mentre `preuMostra` sigui true, `etiquetaPerKgMostra`).
+        'mitja-canal': { nom: 'Mitja canal', preu: 0, preuKg: 0, preuMostra: true, etiquetaMostra: '000 €', kg: 0, etiquetaPesMostra: 'Uns 000 kg', etiquetaPerKgMostra: '000 €/kg', ocupaPlaces: false, placesPerUnitat: 0, maxPerComanda: 10, pendent: true },
+        canal: { nom: 'Canal sencera', preu: 0, preuKg: 0, preuMostra: true, etiquetaMostra: '000 €', kg: 0, etiquetaPesMostra: 'Uns 000 kg', etiquetaPerKgMostra: '000 €/kg', ocupaPlaces: false, placesPerUnitat: 0, maxPerComanda: 10, pendent: true },
       },
 
       // Tandes: un sol model (en Lluc, 01/11/2026 vespre), 26 lots amb data límit. Una tanda surt a la data límit encara
@@ -329,7 +331,7 @@
     };
     d.preuPerKgCanal = function (id) {
       const p = d.productes[id];
-      return p.preuMostra || !p.kg ? p.etiquetaPerKgMostra : d.formatEuros(p.preu / p.kg) + '/kg';
+      return p.preuMostra || !p.preuKg ? p.etiquetaPerKgMostra : d.formatEuros(p.preuKg) + '/kg';
     };
 
     d.preuPerKg = function () {

@@ -200,18 +200,6 @@
     for (let i = e.reservats + abans; i < e.reservats + e.teus; i++) balanca(barra.children[i]);
   }
 
-  /* ---------- C · La càpsula de Mitja canal / Canal sencera ---------- */
-  document.addEventListener('change', (ev) => {
-    const r = ev.target;
-    if (!r.matches || !r.matches('.c-mida input') || !permes()) return;
-    const fila = r.closest('.c-mida');
-    const etiq = fila.querySelectorAll('label');
-    const dist = etiq[1].offsetLeft - etiq[0].offsetLeft;
-    const cap = r.value === 'canal';
-    // De l'altra posició a la d'ara
-    balanca(fila, { eix: 'X', entra: cap ? '0px' : `${dist}px`, final: cap ? `${dist}px` : '0px', fade: false, pseudo: '::before' });
-  });
-
   /* ---------- D · Preguntes ---------- */
   function desplega(d) {
     const p = d.querySelector('p');
