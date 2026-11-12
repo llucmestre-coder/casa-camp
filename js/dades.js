@@ -28,13 +28,12 @@
         telefons: ['646 455 128'],
       },
 
-      // Preu: PENDENT del pastor. `preu` és el valor intern (per lot, en euros); mentre `preuMostra` sigui true
-      // la vista ensenya `etiquetaMostra`, sigui quin sigui el valor. Per posar el preu real: preu = 45,
-      // preuMostra = false. El lot es diu «lot de 5 kg» (`kg`): el €/kg es calcula sobre 5 kg i els kg reals només van a la factura (`pesLot()` suma les peces: 5,1 kg).
+      // Preu (el pastor, 11/11/2026): 99 € + 10 % d'IVA = 108,90 €, IVA inclòs. `preu` és per lot, en euros; si
+      // `preuMostra` torna a ser true, la vista ensenya `etiquetaMostra`. El lot es diu «lot de 5 kg» (`kg`): el €/kg es calcula sobre 5 kg i els kg reals només van a la factura (`pesLot()` suma les peces: 5,1 kg).
       lot: {
         kg: 5,
-        preu: 0,
-        preuMostra: true,
+        preu: 108.9,
+        preuMostra: false,
         etiquetaMostra: '000 €',
         etiquetaPerKgMostra: '000 €/kg',
       },
@@ -57,10 +56,11 @@
       // `maxPerComanda`: null = el que càpiga en una tanda (només per als que ocupen places).
       productes: {
         lot: { nom: 'Lot de 5 kg', ocupaPlaces: true, placesPerUnitat: 1, maxPerComanda: null },
-        // Canals (en Lluc, 11/11/2026): no es compren a la web; el pastor dona el preu per telèfon o WhatsApp. La fitxa
-        // ensenya `preuKg` (PENDENT del pastor; mentre `preuMostra` sigui true, `etiquetaPerKgMostra`).
-        'mitja-canal': { nom: 'Mitja canal', preu: 0, preuKg: 0, preuMostra: true, etiquetaMostra: '000 €', kg: 0, etiquetaPesMostra: 'Uns 000 kg', etiquetaPerKgMostra: '000 €/kg', ocupaPlaces: false, placesPerUnitat: 0, maxPerComanda: 10, pendent: true },
-        canal: { nom: 'Canal sencera', preu: 0, preuKg: 0, preuMostra: true, etiquetaMostra: '000 €', kg: 0, etiquetaPesMostra: 'Uns 000 kg', etiquetaPerKgMostra: '000 €/kg', ocupaPlaces: false, placesPerUnitat: 0, maxPerComanda: 10, pendent: true },
+        // Canals (el pastor, 11/11/2026): no es compren a la web ni se'n mostra el pes; el preu final el dona ell per
+        // telèfon o WhatsApp. La fitxa ensenya `preuKg`, IVA inclòs (14,99 i 13,99 € + 10 %). `preu` (la canal
+        // sencera) no se sap: es queda de mostra.
+        'mitja-canal': { nom: 'Mitja canal', preu: 0, preuKg: 16.49, preuMostra: true, etiquetaMostra: '000 €', etiquetaPerKgMostra: '000 €/kg', ocupaPlaces: false, placesPerUnitat: 0, maxPerComanda: 10, pendent: true },
+        canal: { nom: 'Canal sencera', preu: 0, preuKg: 15.39, preuMostra: true, etiquetaMostra: '000 €', etiquetaPerKgMostra: '000 €/kg', ocupaPlaces: false, placesPerUnitat: 0, maxPerComanda: 10, pendent: true },
       },
 
       // Tandes: un sol model (en Lluc, 01/11/2026 vespre), 26 lots amb data límit. Una tanda surt a la data límit encara
@@ -324,14 +324,10 @@
       return { kgNominal: d.lot.kg, grams, kgReals: grams / 1000 };
     };
 
-    // Pes i preu per kg de les canals (fitxa de la home). `kg` és el pes aproximat: PENDENT del pastor (pregunta 16).
-    d.pesCanal = function (id) {
-      const p = d.productes[id];
-      return !p.kg ? p.etiquetaPesMostra : 'Uns ' + String(p.kg).replace('.', ',') + ' kg';
-    };
+    // Preu per kg de les canals (fitxa de la home), IVA inclòs
     d.preuPerKgCanal = function (id) {
       const p = d.productes[id];
-      return p.preuMostra || !p.preuKg ? p.etiquetaPerKgMostra : d.formatEuros(p.preuKg) + '/kg';
+      return p.preuKg ? d.formatEuros(p.preuKg) + '/kg' : p.etiquetaPerKgMostra;
     };
 
     d.preuPerKg = function () {

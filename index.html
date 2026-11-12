@@ -21,7 +21,7 @@
   "@context": "https://schema.org",
   "@graph": [
     { "@type": "Organization", "name": "Casa Camp", "telephone": "+34646455128", "address": { "@type": "PostalAddress", "addressLocality": "Llessui", "addressRegion": "Lleida", "addressCountry": "ES" } },
-    { "@type": "Product", "name": "Lot de vedella de 5 kg", "description": "Sis talls de vedella en un lot de 5 kg que s'envia refrigerat, per tandes.", "brand": { "@type": "Brand", "name": "Casa Camp" } }
+    { "@type": "Product", "name": "Lot de vedella de 5 kg", "description": "Sis talls de vedella en un lot de 5 kg que s'envia refrigerat, per tandes.", "brand": { "@type": "Brand", "name": "Casa Camp" }, "offers": { "@type": "Offer", "price": "108.90", "priceCurrency": "EUR" } }
   ]
 }
 </script>
@@ -85,10 +85,10 @@
         <li><span>Estofat</span><span>0,51&nbsp;kg</span></li>
       </ul>
       <!-- PENDENT: quant pot variar el pes total del lot (pregunta 2 del pastor) -->
-      <p class="l-nota">Pesos aproximats: cada vedella és diferent. El preu del lot és fix i el preu per kg és sobre 5&nbsp;kg.</p>
+      <p class="l-nota">Pesos aproximats: cada vedella és diferent. El preu del lot és fix, amb l'IVA inclòs, i el preu per kg és sobre 5&nbsp;kg.</p>
     </div>
     <div class="l-caixa">
-      <p class="l-preu"><strong id="l-preu">000 €</strong><span id="l-preu-kg">000 €/kg</span></p>
+      <p class="l-preu"><strong id="l-preu">108,90 €</strong><span id="l-preu-kg">21,78 €/kg</span></p>
       <div class="l-compra">
         <div class="l-quant">
           <button type="button" id="l-menys" aria-label="Un lot menys" disabled>−</button>
@@ -116,7 +116,6 @@
 
 <section class="canals" id="canals" aria-labelledby="canals-titol">
   <!-- Fitxa de les canals (en Lluc, 11/11/2026): no es compren a la web. El pastor dona el preu segons el que vol el comprador; la fitxa ensenya el preu per kg de cada mida i els botons per trucar o escriure per WhatsApp -->
-  <!-- PENDENT (pastor): pes aproximat i preu per kg de cada canal -->
   <div class="lot-graella">
     <figure class="l-foto">
       <!-- FOTO REAL PENDENT: com t'arriba la canal (stock d'Unsplash, Sergey Kotenev, carn-taula-fusta.jpg; veure PLA-eines/stock/FONTS.md) -->
@@ -128,17 +127,14 @@
     </div>
     <div class="l-peces">
       <ul class="l-llista">
-        <li><span>Mitja canal</span><span id="c-pes-mitja-canal">Uns 000&nbsp;kg</span></li>
-        <li><span>Canal sencera</span><span id="c-pes-canal">Uns 000&nbsp;kg</span></li>
+        <li><span>Mitja canal</span><span id="c-preu-kg-mitja-canal">16,49&nbsp;€/kg</span></li>
+        <li><span>Canal sencera</span><span id="c-preu-kg-canal">15,39&nbsp;€/kg</span></li>
       </ul>
-      <p class="l-nota">Pesos aproximats: cada vedella és diferent.</p>
+      <p class="l-nota">IVA inclòs. Cada vedella pesa diferent, i el preu final depèn del pes.</p>
     </div>
     <div class="l-caixa">
-      <ul class="c-preus">
-        <li><span>Mitja canal</span><strong id="c-preu-kg-mitja-canal">000 €/kg</strong></li>
-        <li><span>Canal sencera</span><strong id="c-preu-kg-canal">000 €/kg</strong></li>
-      </ul>
-      <p class="c-text">El preu final depèn del pes. Explica'ns què vols i com ho vols, i et diem quant val.</p>
+      <p class="c-titol">Demana-la per telèfon</p>
+      <p class="c-text">Explica'ns què vols i com ho vols, i et diem quant val.</p>
       <div class="l-compra">
         <a class="boto" href="tel:+34646455128">Truca al 646 455 128</a>
         <a class="boto boto-sec" href="https://wa.me/34646455128?text=Hola%2C%20voldria%20informaci%C3%B3%20sobre%20una%20canal%20de%20vedella." target="_blank" rel="noopener">Escriu per WhatsApp</a>

@@ -164,11 +164,8 @@ h2{font-weight:var(--pes-titol);font-size:var(--t-h2);line-height:1.08;margin:0}
 /* ---------- Canals: fitxa de compra amb selector de mida (03/11/2026). Fa servir la graella i les peces del lot
    (.lot-graella, .l-*); aquí només hi ha el filet de separació i el selector. ---------- */
 .canals{border-top:1px solid var(--linia)}
-.c-preus{list-style:none;margin:0;padding:0}
-.c-preus li{display:flex;justify-content:space-between;align-items:baseline;gap:1rem;padding:.35rem 0}
-.c-preus li+li{border-top:1px solid var(--linia)}
-.c-preus strong{font:var(--pes-titol) 1.5rem/1.1 var(--f-titol);letter-spacing:var(--track)}
-.c-text{margin:.7rem 0 0;color:var(--text-2)}
+.c-titol{margin:0;font:var(--pes-titol) 1.5rem/1.15 var(--f-titol);letter-spacing:var(--track)}
+.c-text{margin:.4rem 0 0;color:var(--text-2)}
 
 /* ---------- Segell ecològic i preguntes ----------
    Preguntes: títol a dalt i llista a sota, en una columna que comença al marge esquerre (en Lluc, 07/11/2026) */

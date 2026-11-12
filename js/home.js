@@ -24,7 +24,6 @@
     el('l-preu').textContent = D.preuLots(1).etiqueta;
     el('l-preu-kg').textContent = D.preuPerKg().etiqueta;
     ['mitja-canal', 'canal'].forEach((id) => {
-      el('c-pes-' + id).textContent = D.pesCanal(id);
       el('c-preu-kg-' + id).textContent = D.preuPerKgCanal(id);
     });
     el('l-llista').innerHTML = D.peces.map((p) => `<li><span>${C.esc(p.nom)}</span><span>${kgPeça(p.grams)}</span></li>`).join('');
