@@ -156,6 +156,8 @@ body.cp{background:var(--superficie)}
 @media (max-width:860px){
   .cp-marc{grid-template-columns:minmax(0,1fr);grid-template-rows:auto 1fr}
   .cp-resum,.cp-compra{justify-content:center;padding:0 16px}
+  /* El resum es queda a dalt en baixar (en Lluc, 13/11/2026): el «← Casa Camp» marxa i la fila del producte s'hi queda */
+  .cp-resum{position:sticky;top:-52px;z-index:5}
   .cp-fix{position:static;padding:10px 0 14px}
   .cp-compra{padding-top:22px;padding-bottom:24px}
   .cp-producte{display:grid;grid-template-columns:56px minmax(0,1fr);gap:0 .8rem;align-items:center;margin-top:.5rem}

@@ -142,11 +142,6 @@ h2{font-weight:var(--pes-titol);font-size:var(--t-h2);line-height:1.08;margin:0}
 .l-preu span{color:var(--text-2)}
 .l-compra{display:flex;flex-direction:column;gap:.6rem;margin-top:1.1rem}
 .l-compra .boto{min-height:52px;white-space:nowrap}
-.l-quant{display:flex;align-items:center;justify-content:space-between;padding:4px;background:var(--tria);border-radius:999px}
-.l-quant button{width:44px;height:44px;border:0;border-radius:50%;background:var(--cta);color:var(--sobre-cta);font:700 1.25rem var(--f-cos);cursor:pointer}
-@media (hover:hover){.l-quant button:hover:not([disabled]){background:var(--cta-fosc)}}
-.l-quant button[disabled]{opacity:.4;cursor:not-allowed}
-.l-quant output{text-align:center;font:var(--pes-sub) 1rem/1.1 var(--f-titol)}
 .l-tanda{margin-top:1.2rem}
 .l-tanda p{margin:0}
 .l-tanda b{font:var(--pes-sub) 1.02rem/1.25 var(--f-titol);letter-spacing:var(--track)}
@@ -158,6 +153,12 @@ h2{font-weight:var(--pes-titol);font-size:var(--t-h2);line-height:1.08;margin:0}
 .l-info dt{font:var(--pes-sub) 1rem/1.3 var(--f-titol);letter-spacing:var(--track)}
 .l-info dd{margin:.2rem 0 0;color:var(--text-2);font-size:.94rem;max-width:30rem}
 .l-enllac{display:inline-block;margin-top:.6rem;color:var(--cta);font-weight:600;text-underline-offset:3px}
+/* El lot (en Lluc, 13/11/2026): foto | una sola columna (nom, peces, preu, botó i tanda), sense la caixa blanca ni el
+   selector de quantitat, que és a la pàgina de compra. Les canals mantenen la graella de tres columnes. */
+.lot .lot-graella{grid-template-columns:minmax(0,1fr) minmax(0,1fr);grid-template-areas:"foto cap" "foto peces" "foto caixa" "info info";grid-template-rows:auto auto 1fr auto}
+.lot .l-cap,.lot .l-peces,.lot .l-caixa{max-width:34rem}
+.lot .l-caixa{background:none;border-radius:0;padding:0;margin-top:.4rem}
+.l-demana{width:100%;min-height:52px;margin-top:1rem}
 @media (hover:hover){.l-enllac:hover{color:var(--cta-fosc)}}
 
 /* ---------- Canals: fitxa de compra amb selector de mida (03/11/2026). Fa servir la graella i les peces del lot
@@ -194,6 +195,11 @@ h2{font-weight:var(--pes-titol);font-size:var(--t-h2);line-height:1.08;margin:0}
 .peu-lema{font:italic var(--pes-sub) 1.15rem/1.3 var(--f-titol);color:var(--sobre-fosc)}
 .peu-legal{grid-column:1/-1;display:flex;flex-wrap:wrap;gap:.4rem 1.6rem;padding-top:20px;border-top:1px solid rgba(255,255,255,.22);font-size:.92rem}
 
+/* Botó de WhatsApp fix a baix a la dreta (en Lluc, 13/11/2026). Verd de WhatsApp amb la icona en 950 (9,6:1). Al mòbil
+   puja quan surt la barra de «Demana», que va just abans al DOM, perquè no la tapi. */
+.wa-flota{position:fixed;z-index:14;right:16px;bottom:calc(16px + env(safe-area-inset-bottom));display:grid;place-items:center;width:56px;height:56px;border-radius:50%;background:#25D366;color:var(--oliva-950);box-shadow:0 4px 14px rgba(15,31,23,.28);transition:bottom .25s ease}
+@media (hover:hover){.wa-flota:hover{background:#1FBF5B}}
+
 /* Barra fixa del mòbil: surt quan el hero ja no és a la pantalla */
 .demana-mobil{position:fixed;z-index:15;left:0;right:0;bottom:0;display:none;align-items:center;gap:.75rem;padding:10px 16px calc(10px + env(safe-area-inset-bottom));background:var(--fosc);color:var(--sobre-fosc);transform:translateY(100%);visibility:hidden;transition:transform .25s ease,visibility 0s .25s}
 .demana-mobil.visible{transform:none;visibility:visible;transition:transform .25s ease}
@@ -222,7 +228,7 @@ body.pagina{--x-pag:calc(max(0px,(100% - 46rem) / 2) + var(--marge-x));display:f
 }
 
 @media (prefers-reduced-motion:reduce){
-  .cap,.cap img,.demana-mobil,.boto,.boto-sec,.boto-lleu,.faq summary{transition:none}
+  .cap,.cap img,.demana-mobil,.wa-flota,.boto,.boto-sec,.boto-lleu,.faq summary{transition:none}
 }
 
 /* Interruptor «Vista mòbil» de la web (js/vista-mobil.js; només amb ?presentacio i a ≥ 861 px): la web dins d'un marc
@@ -256,11 +262,11 @@ body.pagina{--x-pag:calc(max(0px,(100% - 46rem) / 2) + var(--marge-x));display:f
   .l-caixa{padding:14px}
   .l-preu strong{font-size:2rem}
   .l-compra{margin-top:.8rem}
-  .lot .l-compra{flex-direction:row;align-items:center}
-  .lot .l-quant{flex:none}
-  .l-quant button{width:40px;height:40px}
-  .l-quant output{min-width:3.4rem}
-  .lot .l-compra .boto{flex:1;min-height:48px;padding-inline:.8rem}
+  .lot .lot-graella{grid-template-columns:minmax(0,2fr) minmax(0,3fr);grid-template-areas:"cap cap" "foto peces" "caixa caixa" "info info";grid-template-rows:none}
+  .lot .l-cap,.lot .l-peces,.lot .l-caixa{max-width:none}
+  .lot .l-caixa{margin-top:0}
+  .l-demana{margin-top:.8rem}
+  .demana-mobil.visible~.wa-flota{bottom:calc(76px + env(safe-area-inset-bottom))}
   .l-tanda{margin-top:.8rem}
   .l-enllac{margin-top:.35rem}
   .l-info{grid-template-columns:minmax(0,1fr);gap:0;margin:0}
@@ -276,8 +282,6 @@ body.pagina{--x-pag:calc(max(0px,(100% - 46rem) / 2) + var(--marge-x));display:f
 @media (max-width:600px){
   .cap img{width:52px;height:52px}
   .cap.solida img{width:40px;height:40px}
-  .lot .l-compra{gap:.45rem}
-  .lot .l-compra .boto{font-size:.94rem;padding-inline:.6rem}
   .franja .barra{width:150px}
   .segell ul{grid-template-columns:minmax(0,1fr)}
 }

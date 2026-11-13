@@ -29,25 +29,9 @@
     el('l-llista').innerHTML = D.peces.map((p) => `<li><span>${C.esc(p.nom)}</span><span>${kgPeça(p.grams)}</span></li>`).join('');
   }
 
-  // Selector de quantitat de la caixa de compra: el botó porta a la pàgina de compra amb aquests lots (?lots=, js/compra.js). El
-  // màxim és el mateix que el de la pàgina; si no caben a la tanda d'ara, ho diu la pàgina abans de pagar.
-  let lots = 1;
-  let textQueden = ''; // el text de #t-queden quan els lots hi caben (el posa pinta())
-  const maxLots = () => M.maxLotsPerComanda('lot') || M.placesPerTanda();
-  function quantitat(canvi) {
-    lots = Math.min(Math.max(1, lots + canvi), maxLots());
-    Moviment.text(el('l-num'), C.lots(lots), 'balanca');
-    Moviment.teus(el('t-barra'), lots);
-    // Si els lots no hi caben a la tanda d'ara, van tots junts a la següent: ho diu la mateixa frase que la pàgina de compra
-    const a = M.previsioAssignacio(lots, 'lot');
-    el('t-queden').textContent = a.ok && a.motiu !== 'hi-cap' ? C.fraseTandaSeguent(a.dataLimit) : textQueden;
-    el('l-menys').disabled = lots <= 1;
-    el('l-mes').disabled = lots >= maxLots();
-    el('l-demana').href = C.ambPresentacio('compra.html?lots=' + lots);
-  }
-  el('l-demana').href = C.ambPresentacio('compra.html?lots=1'); // en carregar també, perquè l'enllaç porti ?presentacio
-  el('l-menys').addEventListener('click', () => quantitat(-1));
-  el('l-mes').addEventListener('click', () => quantitat(1));
+  // La fitxa ja no porta selector de quantitat (en Lluc, 13/11/2026): els lots es trien a la pàgina de compra
+  // (compra.html, js/compra.js). L'enllaç es refà aquí perquè porti ?presentacio.
+  el('l-demana').href = C.ambPresentacio('compra.html');
 
   // La barra de la tanda, en un tram per lot (js/moviment.js)
   function barra(id, o) {
@@ -60,7 +44,9 @@
     const o = t.ocupacio;
     const places = o.places;
     const queden = o.lliures;
-    const oberta = 'Tanda oberta fins al ' + C.dataCurta(t.dataLimit);
+    // En Lluc, 13/11/2026 (abans «Tanda oberta fins al {data}»). La data és l'últim dia per demanar, no el dia que surt
+    // l'enviament: per això «demana fins al».
+    const oberta = 'Proper enviament: demana fins al ' + C.dataCurta(t.dataLimit);
 
     // Franja sota el hero (en Lluc, 02/11/2026: «Propera tanda: {data}» es llegia com el dia que arriba la carn)
     el('fr-data').textContent = oberta;
@@ -69,15 +55,13 @@
 
     // La tanda dins de la caixa de compra del lot, com a informació de compra
     el('t-titol').textContent = oberta;
-    textQueden = `${queden === 1 ? 'Hi queda 1 lot' : `Hi queden ${queden} lots`} de ${places}. Si s'omple abans, es tanca abans; si no, surt igualment.`;
-    el('t-queden').textContent = textQueden;
+    el('t-queden').textContent = `${queden === 1 ? 'Hi queda 1 lot' : `Hi queden ${queden} lots`} de ${places}. Si s'omple abans, es tanca abans; si no, surt igualment.`;
     const pb = el('t-barra');
     pb.setAttribute('aria-valuemax', places);
     pb.setAttribute('aria-valuenow', o.lots);
     pb.setAttribute('aria-label', `Lots reservats a la tanda: ${o.lots} de ${places}`);
     barra('t-barra', o);
     el('t-entrega').textContent = `Uns ${C.diesEntrega()} dies després que es tanqui la tanda.`;
-    quantitat(0);
 
     // Barra fixa del mòbil
     // Sense número de tanda, com la franja (jutge, 02/11/2026: al comprador no li diu res)

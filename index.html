@@ -47,7 +47,7 @@
 </section>
 
 <div class="franja" id="franja">
-  <strong id="fr-data">Tanda oberta</strong>
+  <strong id="fr-data">Proper enviament</strong>
   <div class="barra" id="fr-barra" aria-hidden="true"><i></i></div>
   <span id="fr-queden"></span>
 </div>
@@ -64,7 +64,7 @@
 </section>
 
 <section class="lot" id="lot" aria-labelledby="lot-titol">
-  <!-- Fitxa de compra (variant C «Mostrador», en Lluc 02/11/2026; PLA.md §«Fitxa de compra del lot»): foto | nom i peces | caixa de compra -->
+  <!-- Fitxa de compra (variant C «Mostrador», en Lluc 02/11/2026; PLA.md §«Fitxa de compra del lot»): foto | una sola columna amb nom, peces, preu, botó i tanda (en Lluc, 13/11/2026). Els lots es trien a compra.html -->
   <div class="lot-graella">
     <figure class="l-foto">
       <!-- FOTO REAL PENDENT: el lot obert, amb les sis peces (stock d'Unsplash, Sergey Kotenev: no concorda del tot amb les peces del lot; veure PLA-eines/stock/FONTS.md) -->
@@ -89,16 +89,9 @@
     </div>
     <div class="l-caixa">
       <p class="l-preu"><strong id="l-preu">108,90 €</strong><span id="l-preu-kg">21,78 €/kg</span></p>
-      <div class="l-compra">
-        <div class="l-quant">
-          <button type="button" id="l-menys" aria-label="Un lot menys" disabled>−</button>
-          <output id="l-num" aria-live="polite">1 lot</output>
-          <button type="button" id="l-mes" aria-label="Un lot més">+</button>
-        </div>
-        <a class="boto" id="l-demana" href="compra.html?lots=1">Demana el teu lot</a>
-      </div>
+      <a class="boto l-demana" id="l-demana" href="compra.html">Demana el teu lot</a>
       <div class="l-tanda">
-        <p><b id="t-titol">Tanda oberta</b></p>
+        <p><b id="t-titol">Proper enviament</b></p>
         <div class="barra" id="t-barra" role="progressbar" aria-valuemin="0" aria-valuemax="26" aria-valuenow="0" aria-label="Lots reservats a la tanda"><i></i></div>
         <p class="t-queden" id="t-queden"></p>
       </div>
@@ -153,7 +146,7 @@
 </section>
 
 <section class="faq" id="preguntes" aria-labelledby="faq-titol">
-  <h2 id="faq-titol">Preguntes</h2>
+  <h2 id="faq-titol">Preguntes freqüents</h2>
   <!-- Textos de PLA-COPY.md §1.6. Els [PENDENT] no es mostren: són aquí, cercables -->
   <div class="faq-llista" id="faq-llista">
     <!-- PENDENT: el motiu en paraules del pastor; p. ex., si una tanda correspon a una vedella (pregunta 4) -->
@@ -195,6 +188,9 @@
   <a class="boto" href="#lot">Demana el teu lot</a>
   <p id="dm-text"></p>
 </div>
+
+<!-- Botó de WhatsApp fix a baix a la dreta (en Lluc, 13/11/2026). El missatge és text de mostra -->
+<a class="wa-flota" href="https://wa.me/34646455128?text=Hola%2C%20voldria%20informaci%C3%B3%20sobre%20els%20lots%20de%20vedella." target="_blank" rel="noopener" aria-label="Escriu-nos per WhatsApp"><svg viewBox="0 0 24 24" width="28" height="28" aria-hidden="true" focusable="false"><path fill="currentColor" d="M12.04 2C6.58 2 2.13 6.45 2.13 11.91c0 1.75.46 3.45 1.32 4.95L2.05 22l5.25-1.38a9.9 9.9 0 0 0 4.74 1.21h.01c5.46 0 9.9-4.45 9.9-9.91 0-2.65-1.03-5.14-2.9-7.01A9.82 9.82 0 0 0 12.04 2zm0 1.67c2.2 0 4.26.86 5.82 2.42a8.2 8.2 0 0 1 2.41 5.83c0 4.54-3.7 8.23-8.24 8.23-1.48 0-2.93-.4-4.2-1.15l-.3-.18-3.12.82.83-3.04-.2-.31a8.2 8.2 0 0 1-1.26-4.38c0-4.54 3.7-8.24 8.26-8.24zM8.53 7.33c-.16 0-.43.06-.66.31-.22.25-.87.85-.87 2.07 0 1.22.89 2.4 1.01 2.56.12.17 1.75 2.67 4.23 3.74.59.26 1.05.41 1.41.52.59.19 1.13.16 1.56.1.48-.07 1.47-.6 1.67-1.18.21-.58.21-1.07.15-1.18-.07-.1-.23-.16-.48-.29-.25-.12-1.47-.72-1.69-.81-.23-.08-.39-.12-.56.13-.16.25-.64.81-.78.97-.15.17-.29.19-.54.06-.25-.12-1.05-.39-1.99-1.23-.74-.66-1.23-1.47-1.38-1.72-.14-.25-.01-.38.11-.5.11-.11.25-.29.37-.43.13-.15.17-.25.25-.42.08-.16.04-.31-.02-.43-.06-.13-.56-1.35-.77-1.84-.2-.49-.4-.42-.56-.43h-.46z"/></svg></a>
 
 <noscript><p class="avis-noscript">Per demanar, truca'ns al <a href="tel:+34646455128">646 455 128</a>.</p></noscript>
 
