@@ -12,14 +12,11 @@
 
 /* ---------- Durades que ja hi eren a styles.css, multiplicades pel tempo ----------
    (A la web de veritat es canvien directament a styles.css; aquí es redeclaren perquè styles.css no es toca.) */
-.vel{transition:opacity calc(.25s * var(--tempo))}
-.full{transition:transform calc(.32s * var(--tempo)) var(--corba),visibility 0s calc(.32s * var(--tempo))}
-body.full-obert .full{transition:transform calc(.32s * var(--tempo)) var(--corba)}
 .demana-mobil{transition:transform calc(.25s * var(--tempo)) ease,visibility 0s calc(.25s * var(--tempo))}
 .demana-mobil.visible{transition:transform calc(.25s * var(--tempo)) ease}
 .camp label{transition:top calc(.15s * var(--tempo)),font-size calc(.15s * var(--tempo)),transform calc(.15s * var(--tempo))}
 @media (hover:hover){
-  .boto,.boto-sec,.boto-lleu,.tanca,.faq summary{transition:background-color calc(.15s * var(--tempo)),color calc(.15s * var(--tempo))}
+  .boto,.boto-sec,.boto-lleu,.faq summary{transition:background-color calc(.15s * var(--tempo)),color calc(.15s * var(--tempo))}
 }
 
 /* ---------- A · La barra de la tanda en 26 trams ----------

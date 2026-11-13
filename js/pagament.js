@@ -1,4 +1,4 @@
-/* Casa Camp — pàgina de pagament (pagament.html; en Lluc, 07/11/2026). Rep la comanda que el full de compra ha desat a
+/* Casa Camp — pàgina de pagament (pagament.html; en Lluc, 07/11/2026). Rep la comanda que la pàgina de compra ha desat a
    sessionStorage (C.comandaEnCurs), en pinta el resum i fa el pagament simulat. Només amb `?presentacio`: sense, diu
    que ara es demana per telèfon (§8.A: cap «pagat» que el codi no ha aconseguit). Abans era el pas 3 del full
    (js/compra.js). A la versió real, aquesta pàgina és la de la passarel·la. */
@@ -31,7 +31,7 @@
   const cos = el('pg-cos');
   const resum = el('pg-resum-cos');
   const torna = el('pg-torna');
-  torna.href = C.ambPresentacio('index.html#comanda');
+  torna.href = C.ambPresentacio('compra.html');
 
   const S = { comanda: null, pagant: false, metode: 'targeta', tocats: new Set(), totsTocats: false };
 
@@ -296,8 +296,8 @@
     }
     const v = M.validaClient(c.client, { sensAdreca: !!c.enviament && c.enviament.mode === 'recollida' && D.zonaDeCP(c.client.cp) === 'rodalies' });
     if (!v.ok || !String(c.client.cognoms || '').trim()) {
-      missatge('Falten dades de l’entrega', 'Torna al full de compra i revisa-les.', false);
-      torna.href = C.ambPresentacio('index.html#comanda');
+      missatge('Falten dades de l’entrega', 'Torna a la pàgina de compra i revisa-les.', false);
+      torna.href = C.ambPresentacio('compra.html');
       return;
     }
     // Fora de Catalunya no es cobra res, ni el lot ni les canals
@@ -308,8 +308,8 @@
     }
     // L'enviament ha de ser definitiu (res no es cobra sense saber com i quant)
     if (D.productes[c.producte].ocupaPlaces && !D.costEnviament(c.client.cp, Object.assign({ lots: c.lots }, c.enviament)).complet) {
-      missatge('Falten dades de l’entrega', 'Torna al full de compra i tria com vols rebre el lot.', false);
-      torna.href = C.ambPresentacio('index.html#comanda');
+      missatge('Falten dades de l’entrega', 'Torna a la pàgina de compra i tria com vols rebre el lot.', false);
+      torna.href = C.ambPresentacio('compra.html');
       return;
     }
     S.comanda = c;

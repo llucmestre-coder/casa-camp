@@ -95,7 +95,7 @@
           <output id="l-num" aria-live="polite">1 lot</output>
           <button type="button" id="l-mes" aria-label="Un lot més">+</button>
         </div>
-        <button type="button" class="boto" id="l-demana" data-obre-full data-lots="1">Demana el teu lot</button>
+        <a class="boto" id="l-demana" href="compra.html?lots=1">Demana el teu lot</a>
       </div>
       <div class="l-tanda">
         <p><b id="t-titol">Tanda oberta</b></p>
@@ -170,7 +170,7 @@
     <!-- PENDENT: màxim de lots per comanda -->
     <details><summary>Puc demanar més d'un lot?</summary><p>Sí. Tots els lots d'una comanda viatgen junts: si no caben a la tanda d'ara, van a la següent, i t'ho diem abans de pagar.</p></details>
     <!-- PENDENT: consells de la casa per congelar-la i descongelar-la (la resposta d'ara és un consell general, no és del pastor) -->
-    <details id="faq-recurrent"><summary>Puc fer-lo recurrent?</summary><p>Sí, només amb els lots de 5 kg. Al full de compra, activa «Fes-lo recurrent» i tria cada 2, 4 o 8 setmanes. T'apartem un lot cada vegada. El primer el pagues ara; els següents te'ls cobrem quan es tanca cada tanda. No hi ha permanència: per aturar-ho o saltar-te una tanda, tens un enllaç als correus que t'enviem, que va fins a la data límit de cada tanda.</p></details>
+    <details id="faq-recurrent"><summary>Puc fer-lo recurrent?</summary><p>Sí, només amb els lots de 5 kg. A la pàgina de compra, activa «Fes-lo recurrent» i tria cada 2, 4 o 8 setmanes. T'apartem un lot cada vegada. El primer el pagues ara; els següents te'ls cobrem quan es tanca cada tanda. No hi ha permanència: per aturar-ho o saltar-te una tanda, tens un enllaç als correus que t'enviem, que va fins a la data límit de cada tanda.</p></details>
     <details><summary>Es pot congelar?</summary><p>Sí. Si no te la menjaràs en uns dies, congela-la quan t'arribi.</p></details>
     <details><summary>Com es paga?</summary><p>Amb targeta, Apple Pay o Google Pay, en fer la comanda.</p></details>
   </div>
@@ -191,85 +191,17 @@
 </footer>
 
 <div class="demana-mobil" id="demana-mobil">
-  <!-- Els botons de fora de la fitxa porten al producte, no al full (en Lluc, 07/11/2026) -->
+  <!-- Els botons de fora de la fitxa porten al producte, no a la pàgina de compra (en Lluc, 07/11/2026) -->
   <a class="boto" href="#lot">Demana el teu lot</a>
   <p id="dm-text"></p>
 </div>
 
 <noscript><p class="avis-noscript">Per demanar, truca'ns al <a href="tel:+34646455128">646 455 128</a>.</p></noscript>
 
-<div class="vel" data-tanca-full></div>
-<aside class="full" id="full" role="dialog" aria-modal="true" aria-labelledby="full-titol" inert>
-  <div class="full-cap"><h2 id="full-titol">Demana el teu lot</h2><button type="button" class="tanca" data-tanca-full aria-label="Tanca">×</button></div>
-  <div id="full-cos">
-  <form id="full-form" novalidate>
-    <section class="pas" id="pas-1" aria-labelledby="pas-1-titol">
-      <h3 id="pas-1-titol">1. Quants lots vols</h3>
-      <div class="quant" id="quant">
-        <button type="button" class="q-menys" id="q-menys" aria-label="Un lot menys">−</button>
-        <output class="q-num" id="q-num" aria-live="polite">1</output>
-        <button type="button" class="q-mes" id="q-mes" aria-label="Un lot més">+</button>
-        <span class="q-unitat" id="q-unitat">lot de 5&nbsp;kg</span>
-      </div>
-      <p class="q-resum" id="q-resum"></p>
-      <p class="q-max" id="q-max" hidden></p>
-      <p class="linia-tanda" id="q-tanda" aria-live="polite"></p>
-      <p class="q-canvi" id="q-canvi" hidden><button type="button" class="enllac-boto" id="q-canvi-boto">Prefereixes un lot de 5&nbsp;kg?</button></p>
-      <!-- Subscripció (variant B del prototip, 07/11/2026): només per al lot; apagada d'entrada. Ho pinta js/compra.js -->
-      <div class="sub-b" id="sub-b" hidden>
-        <label class="interruptor" for="sub-on"><span class="tx"><b>Fes-lo recurrent</b><span id="sub-text"></span></span><input type="checkbox" id="sub-on" role="switch"><span class="pal" aria-hidden="true"></span></label>
-        <div id="sub-detall" hidden>
-          <fieldset class="pindoles"><legend class="sr-nomes">Cada quantes setmanes</legend><span id="sub-freq"></span></fieldset>
-          <p class="nota" id="sub-dates" aria-live="polite"></p>
-        </div>
-      </div>
-    </section>
-
-    <section class="pas" id="pas-2" aria-labelledby="pas-2-titol">
-      <h3 id="pas-2-titol">2. Les teves dades</h3>
-      <div class="camps">
-        <div class="camp"><label for="f-nom">Nom</label><input id="f-nom" name="nom" autocomplete="given-name" placeholder=" " aria-describedby="f-nom-err"><span class="error" id="f-nom-err" hidden></span></div>
-        <div class="camp"><label for="f-cognoms">Cognoms</label><input id="f-cognoms" name="cognoms" autocomplete="family-name" placeholder=" " aria-describedby="f-cognoms-err"><span class="error" id="f-cognoms-err" hidden></span></div>
-        <div class="camp"><label for="f-telefon">Telèfon</label><input id="f-telefon" name="telefon" type="tel" autocomplete="tel" inputmode="tel" placeholder=" " aria-describedby="f-telefon-err"><span class="error" id="f-telefon-err" hidden></span></div>
-        <div class="camp"><label for="f-email">Correu electrònic</label><input id="f-email" name="email" type="email" autocomplete="email" placeholder=" " aria-describedby="f-email-err"><span class="error" id="f-email-err" hidden></span></div>
-        <div class="camp"><label for="f-cp">Codi postal</label><input id="f-cp" name="cp" autocomplete="postal-code" inputmode="numeric" placeholder=" " aria-describedby="f-cp-err"><span class="error" id="f-cp-err" hidden></span></div>
-        <div class="camp"><label for="f-poblacio">Població</label><input id="f-poblacio" name="poblacio" autocomplete="address-level2" placeholder=" " aria-describedby="f-poblacio-err"><span class="error" id="f-poblacio-err" hidden></span></div>
-      </div>
-      <!-- Enviament segons el codi postal (variant B del prototip, 07/11/2026). Ho pinta js/compra.js -->
-      <div class="env-tria" id="env-tria" aria-live="polite"></div>
-      <div class="camps camps-entrega">
-        <div class="camp ample" id="camp-adreca"><label for="f-adreca">Adreça</label><input id="f-adreca" name="adreca" autocomplete="street-address" placeholder=" " aria-describedby="f-adreca-err"><span class="error" id="f-adreca-err" hidden></span></div>
-        <div class="camp ample" id="camp-notes"><label for="f-notes">Notes per a l'entrega (opcional)</label><textarea id="f-notes" name="notes" autocomplete="off" placeholder=" " rows="2"></textarea></div>
-      </div>
-      <div class="desglos" id="desglos" aria-live="polite">
-        <div><span id="d-lots">Lots</span><span id="d-lots-imp"></span></div>
-        <div><span>Enviament</span><span id="d-env"></span></div>
-        <div class="total"><span>Total</span><span id="d-total"></span></div>
-      </div>
-      <p class="nota-enviament" id="d-nota"></p>
-      <p class="avis-errors" id="avis-errors" role="alert" hidden></p>
-      <!-- Avisos de tanda nova (P45, art. 21.2 LSSI; variant A): text pla i casella normal, just abans de «Continua» -->
-      <div class="avis-a" id="avis-tanda">
-        <p>T'avisarem per correu quan obri una tanda nova.</p>
-        <label class="casella" for="f-no-avisos"><input type="checkbox" id="f-no-avisos" name="no-avisos"><span>No vull rebre aquests avisos</span></label>
-      </div>
-      <button type="button" class="boto boto-ample" id="continua">Continua</button>
-      <a class="boto boto-ample boto-trucada" id="truca" href="tel:+34646455128" hidden>Truca'ns</a>
-    </section>
-
-    <section class="pas" id="pas-3" aria-labelledby="pas-3-titol" hidden>
-      <h3 id="pas-3-titol">3. Pagament</h3>
-      <div id="pas-3-cos"></div>
-    </section>
-  </form>
-  </div>
-</aside>
-
 <script src="js/dades.js"></script>
 <script src="js/magatzem.js"></script>
 <script src="js/comu.js"></script>
 <script src="js/moviment.js"></script>
-<script src="js/compra.js"></script>
 <script src="js/home.js"></script>
 <script src="js/vista-mobil.js"></script>
 </body>

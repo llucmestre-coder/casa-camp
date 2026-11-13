@@ -1,0 +1,120 @@
+<!doctype html>
+<html lang="ca">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex">
+<title>Demana el teu lot · Casa Camp</title>
+<meta name="description" content="Demana el teu lot de vedella de Casa Camp: tria quants lots vols i on te'ls portem.">
+<meta property="og:type" content="website">
+<meta property="og:title" content="Demana el teu lot · Casa Camp">
+<meta property="og:description" content="Demana el teu lot de vedella de Casa Camp: tria quants lots vols i on te'ls portem.">
+<!-- PENDENT: og:image amb URL absoluta quan hi hagi domini ([DOMINI]), com a la home -->
+
+<link rel="icon" href="assets/favicon.ico" sizes="any">
+<link rel="icon" type="image/png" sizes="32x32" href="assets/favicon-32.png">
+<link rel="apple-touch-icon" href="assets/apple-touch-icon.png">
+<link rel="preload" href="assets/fonts/schibsted-grotesk-latin.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="stylesheet" href="css/styles.css">
+<link rel="stylesheet" href="css/compra.css">
+<link rel="stylesheet" href="css/moviment.css">
+</head>
+<body class="cp">
+<!-- Pantalla de compra (en Lluc, 13/11/2026): substitueix el full lateral. Mateixa geometria que pagament.html (el
+     resum a l'esquerra, el que s'omple a la dreta), amb l'aspecte de la web. La pinta js/compra.js. -->
+<div class="cp-marc">
+  <aside class="cp-resum" aria-label="Resum de la comanda">
+    <div class="cp-columna cp-fix">
+      <a class="cp-torna" id="cp-torna" href="index.html#lot"><span aria-hidden="true">←</span><img src="assets/logo-blanc.webp" alt="" width="208" height="208"><span>Casa Camp</span></a>
+      <div class="cp-producte">
+        <img class="cp-foto" id="r-foto" src="assets/fotos/lot-840.webp" alt="" width="840" height="571">
+        <p class="cp-nom" id="r-nom">Lot de vedella de 5 kg</p>
+        <dl class="cp-xifres" aria-live="polite">
+          <div class="cp-lots"><dt id="r-lots">Lots</dt><dd id="r-lots-imp"></dd></div>
+          <div><dt>Enviament</dt><dd id="r-env"></dd></div>
+          <div class="cp-total"><dt>Total</dt><dd id="r-total"></dd></div>
+        </dl>
+        <p class="cp-nota" id="r-recurrent" hidden></p>
+        <p class="cp-nota" id="r-nota"></p>
+      </div>
+    </div>
+  </aside>
+
+  <main class="cp-compra">
+    <div class="cp-columna">
+      <h1 id="compra-titol">Demana el teu lot</h1>
+      <noscript><p class="avis-noscript">Per demanar, truca'ns al <a href="tel:+34646455128">646 455 128</a>.</p></noscript>
+      <form id="compra-form" novalidate>
+        <section class="pas" id="pas-1" aria-labelledby="pas-1-titol">
+          <h2 id="pas-1-titol">1. Quants lots vols</h2>
+          <div class="quant" id="quant">
+            <button type="button" class="q-menys" id="q-menys" aria-label="Un lot menys">−</button>
+            <output class="q-num" id="q-num" aria-live="polite">1</output>
+            <button type="button" class="q-mes" id="q-mes" aria-label="Un lot més">+</button>
+            <span class="q-unitat" id="q-unitat">lot de 5&nbsp;kg</span>
+          </div>
+          <p class="q-resum" id="q-resum"></p>
+          <p class="q-max" id="q-max" hidden></p>
+          <p class="linia-tanda" id="q-tanda" aria-live="polite"></p>
+          <p class="q-canvi" id="q-canvi" hidden><button type="button" class="enllac-boto" id="q-canvi-boto">Prefereixes un lot de 5&nbsp;kg?</button></p>
+          <!-- Subscripció (variant B del prototip, 07/11/2026): només per al lot; apagada d'entrada. Ho pinta js/compra.js -->
+          <div class="sub-b" id="sub-b" hidden>
+            <label class="interruptor" for="sub-on"><span class="tx"><b>Fes-lo recurrent</b><span id="sub-text"></span></span><input type="checkbox" id="sub-on" role="switch"><span class="pal" aria-hidden="true"></span></label>
+            <div id="sub-detall" hidden>
+              <fieldset class="pindoles"><legend class="sr-nomes">Cada quantes setmanes</legend><span id="sub-freq"></span></fieldset>
+              <p class="nota" id="sub-dates" aria-live="polite"></p>
+            </div>
+          </div>
+        </section>
+
+        <section class="pas" id="pas-2" aria-labelledby="pas-2-titol">
+          <h2 id="pas-2-titol">2. Les teves dades</h2>
+          <div class="camps">
+            <div class="camp"><label for="f-nom">Nom</label><input id="f-nom" name="nom" autocomplete="given-name" placeholder=" " aria-describedby="f-nom-err"><span class="error" id="f-nom-err" hidden></span></div>
+            <div class="camp"><label for="f-cognoms">Cognoms</label><input id="f-cognoms" name="cognoms" autocomplete="family-name" placeholder=" " aria-describedby="f-cognoms-err"><span class="error" id="f-cognoms-err" hidden></span></div>
+            <div class="camp"><label for="f-telefon">Telèfon</label><input id="f-telefon" name="telefon" type="tel" autocomplete="tel" inputmode="tel" placeholder=" " aria-describedby="f-telefon-err"><span class="error" id="f-telefon-err" hidden></span></div>
+            <div class="camp"><label for="f-email">Correu electrònic</label><input id="f-email" name="email" type="email" autocomplete="email" placeholder=" " aria-describedby="f-email-err"><span class="error" id="f-email-err" hidden></span></div>
+            <div class="camp"><label for="f-cp">Codi postal</label><input id="f-cp" name="cp" autocomplete="postal-code" inputmode="numeric" placeholder=" " aria-describedby="f-cp-err"><span class="error" id="f-cp-err" hidden></span></div>
+            <div class="camp"><label for="f-poblacio">Població</label><input id="f-poblacio" name="poblacio" autocomplete="address-level2" placeholder=" " aria-describedby="f-poblacio-err"><span class="error" id="f-poblacio-err" hidden></span></div>
+          </div>
+          <!-- Enviament segons el codi postal (variant B del prototip, 07/11/2026). Ho pinta js/compra.js -->
+          <div class="env-tria" id="env-tria" aria-live="polite"></div>
+          <div class="camps camps-entrega">
+            <div class="camp ample" id="camp-adreca"><label for="f-adreca">Adreça</label><input id="f-adreca" name="adreca" autocomplete="street-address" placeholder=" " aria-describedby="f-adreca-err"><span class="error" id="f-adreca-err" hidden></span></div>
+            <div class="camp ample" id="camp-notes"><label for="f-notes">Notes per a l'entrega (opcional)</label><textarea id="f-notes" name="notes" autocomplete="off" placeholder=" " rows="2"></textarea></div>
+          </div>
+          <!-- El desglossament de sota només es veu al mòbil (a l'escriptori el resum de l'esquerra és sempre a la vista) -->
+          <div class="desglos" id="desglos" aria-live="polite">
+            <div><span id="d-lots">Lots</span><span id="d-lots-imp"></span></div>
+            <div><span>Enviament</span><span id="d-env"></span></div>
+            <div class="total"><span>Total</span><span id="d-total"></span></div>
+            <p class="nota-recurrent" id="d-recurrent" hidden></p>
+          </div>
+          <p class="nota-enviament" id="d-nota"></p>
+          <p class="avis-errors" id="avis-errors" role="alert" hidden></p>
+          <!-- Avisos de tanda nova (P45, art. 21.2 LSSI; variant A): text pla i casella normal, just abans de «Continua» -->
+          <div class="avis-a" id="avis-tanda">
+            <p>T'avisarem per correu quan obri una tanda nova.</p>
+            <label class="casella" for="f-no-avisos"><input type="checkbox" id="f-no-avisos" name="no-avisos"><span>No vull rebre aquests avisos</span></label>
+          </div>
+          <button type="button" class="boto boto-ample" id="continua">Continua</button>
+          <a class="boto boto-ample boto-trucada" id="truca" href="tel:+34646455128" hidden>Truca'ns</a>
+        </section>
+
+        <section class="pas" id="pas-3" aria-labelledby="pas-3-titol" hidden>
+          <h2 id="pas-3-titol">3. Pagament</h2>
+          <div id="pas-3-cos"></div>
+        </section>
+      </form>
+      <footer class="cp-peu"><nav aria-label="Textos legals"><a href="avis-legal.html">Avís legal</a><a href="privacitat.html">Privacitat</a></nav></footer>
+    </div>
+  </main>
+</div>
+
+<script src="js/dades.js"></script>
+<script src="js/magatzem.js"></script>
+<script src="js/comu.js"></script>
+<script src="js/moviment.js"></script>
+<script src="js/compra.js"></script>
+</body>
+</html>

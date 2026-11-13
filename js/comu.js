@@ -74,11 +74,11 @@
 
   const kg = (n) => (Math.round(n * 10) / 10).toString().replace('.', ',');
 
-  // La frase que diu que la comanda va sencera a la tanda següent: la fan servir el full de compra (js/compra.js) i la
+  // La frase que diu que la comanda va sencera a la tanda següent: la fan servir la pàgina de compra (js/compra.js) i la
   // caixa del lot (js/home.js), amb la mateixa cadena
   const fraseTandaSeguent = (dataLimit) => `Perquè t'arribi tot junt, va a la tanda següent, oberta fins al ${dataCurta(dataLimit)}.`;
 
-  // Imports d'una compra abans de pagar (full de compra i pàgina de pagament): preu del producte, enviament pel codi
+  // Imports d'una compra abans de pagar (pàgina de compra i pàgina de pagament): preu del producte, enviament pel codi
   // postal i total. Les canals no van per tandes: l'entrega és per acordar i el total és el producte.
   function resumCompra(id, n, cp, opcions) {
     const p = D.productes[id];
@@ -93,7 +93,7 @@
     return { aPart, preu, env, total, unitari };
   }
 
-  // La comanda que passa del full de compra a la pàgina de pagament (sessionStorage: només aquesta pestanya)
+  // La comanda que passa de la pàgina de compra a la pàgina de pagament (sessionStorage: només aquesta pestanya)
   const CLAU_COMANDA = 'casacamp-comanda';
   const comandaEnCurs = {
     desa(c) {

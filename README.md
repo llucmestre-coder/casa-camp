@@ -89,7 +89,7 @@ la que més convé canviar. Quan hi sigui la foto real del lot obert es pot deci
 
 | Pàgina | Què és |
 |---|---|
-| `index.html` | La home: qui som, el lot, les canals, el segell ecològic i les preguntes. El full de compra s'obre des de qualsevol botó «Demana». |
+| `index.html` | La home: qui som, el lot, les canals, el segell ecològic i les preguntes. El botó «Demana el teu lot» de la fitxa porta a la pàgina de compra. |
 | `panell/` | El panell del pastor: tandes, comandes, transport, correus i configuració. Només s'obre amb el mode de presentació. |
 | `avis-legal.html`, `privacitat.html`, `galetes.html` | Esquelets legals. Falten les dades del titular (raó social, NIF i adreça) i quatre dades més que es marquen `[PENDENT]`. |
 | `404.html` | Pàgina d'error. |

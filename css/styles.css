@@ -1,6 +1,6 @@
-/* Casa Camp — home i full de compra. Combinació aprovada a la Fase 1 (PLA.md §Disseny): paleta «Oliva» (07/11/2026), lletra
-   Schibsted Grotesk, barra simple, botons píndola, full de compra B. Tokens a :root; tot el que hi ha sota només fa
-   servir variables. Aquest fitxer també el carrega el panell (components comuns: botons, camps, barra). */
+/* Casa Camp — home i components comuns. Combinació aprovada a la Fase 1 (PLA.md §Disseny): paleta «Oliva» (07/11/2026), lletra
+   Schibsted Grotesk, barra simple, botons píndola. El formulari de la pàgina de compra és a css/compra.css. Tokens a :root; tot el que hi ha sota només fa
+   servir variables. Aquest fitxer també el carrega el panell (components comuns: botons, barra). */
 
 /* ---------- Lletra (allotjada: cap petició a tercers en carregar; llicència OFL a assets/fonts/OFL.txt) ---------- */
 @font-face{font-family:"Schibsted Grotesk";font-style:normal;font-weight:400 900;font-display:swap;src:url("../assets/fonts/schibsted-grotesk-latin-ext.woff2") format("woff2");unicode-range:U+0100-02BA,U+02BD-02C5,U+02C7-02CC,U+02CE-02D7,U+02DD-02FF,U+0304,U+0308,U+0329,U+1D00-1DBF,U+1E00-1E9F,U+1EF2-1EFF,U+2020,U+20A0-20AB,U+20AD-20C0,U+2113,U+2C60-2C7F,U+A720-A7FF}
@@ -42,7 +42,6 @@
 *{box-sizing:border-box}
 html{-webkit-text-size-adjust:100%}
 body{margin:0;background:var(--fons);color:var(--text);font:400 1rem/var(--lh) var(--f-cos)}
-body.full-obert{overflow:hidden}
 img{max-width:100%;height:auto;display:block}
 a{color:inherit}
 h1,h2,h3{font-family:var(--f-titol);letter-spacing:var(--track);text-wrap:balance}
@@ -216,72 +215,14 @@ body.pagina{--x-pag:calc(max(0px,(100% - 46rem) / 2) + var(--marge-x));display:f
 .peu-simple{grid-template-columns:minmax(0,1fr);padding-inline:var(--x-pag)}
 .avis-noscript{margin:0;padding:.7rem var(--marge-x);background:var(--tria);color:var(--cta-fosc);font-weight:600}
 
-/* ---------- Full de compra (B: flotant a l'escriptori, des de baix al mòbil) ---------- */
-.vel{position:fixed;inset:0;background:var(--vel);z-index:20;opacity:0;pointer-events:none;transition:opacity .25s}
-.full{position:fixed;z-index:21;top:12px;right:12px;bottom:12px;width:min(440px,calc(100% - 24px));overflow:auto;overscroll-behavior:contain;color:var(--text);background:var(--superficie);border-radius:14px;visibility:hidden;transform:translateX(calc(100% + 24px));transition:transform .32s cubic-bezier(.2,.8,.2,1),visibility 0s .32s}
-body.full-obert .vel{opacity:1;pointer-events:auto}
-body.full-obert .full{transform:none;visibility:visible;transition:transform .32s cubic-bezier(.2,.8,.2,1)}
-.full-cap{position:sticky;top:0;z-index:2;display:flex;justify-content:space-between;align-items:center;padding:20px 24px 12px;background:var(--superficie)}
-.full-cap h2{font-size:1.5rem;line-height:1.05}
-.tanca{width:44px;height:44px;border:0;border-radius:50%;background:var(--bloc);color:inherit;font:400 1.5rem/1 var(--f-cos);cursor:pointer;box-shadow:inset 0 0 0 1.5px var(--linia)}
-@media (hover:hover){.tanca:hover{background:var(--tria)}}
-.pas{padding:18px 24px 20px;border-bottom:1px solid var(--linia)}
-.pas:last-child{border-bottom:0}
-.pas h3{margin:0 0 .9rem;font:700 .95rem/1.2 var(--f-cos);letter-spacing:0;color:var(--text-2)}
-
-/* Quantitat: − i + als extrems (cercles de 44 px), la xifra i la unitat centrades entre tots dos */
-.quant{display:grid;grid-template-columns:44px minmax(0,1fr) 44px;grid-template-areas:"menys num mes" "menys unitat mes";align-items:center;gap:0 .6rem;padding:6px;background:var(--tria);border-radius:999px}
-.quant button{width:44px;height:44px;border:0;border-radius:50%;background:var(--cta);color:var(--sobre-cta);font:700 1.3rem var(--f-cos);cursor:pointer}
-@media (hover:hover){.quant button:hover:not([disabled]){background:var(--cta-fosc)}}
-.quant button[disabled]{opacity:.4;cursor:not-allowed}
-.q-menys{grid-area:menys}
-.q-mes{grid-area:mes}
-.q-num{grid-area:num;align-self:end;text-align:center;font:var(--pes-titol) 1.4rem/1.05 var(--f-titol)}
-.q-unitat{grid-area:unitat;align-self:start;text-align:center;font-size:var(--t-petit);color:var(--text-2)}
-.q-resum{margin:.7rem 0 0;font-weight:700}
-.q-resum span{font-weight:400;color:var(--text-2)}
-.q-max{margin:.4rem 0 0;font-size:var(--t-petit);color:var(--text-2)}
-.linia-tanda{margin:.8rem 0 0;font-size:.98rem}
-.q-canvi{margin:.6rem 0 0}
-
-/* Camps: el títol (un <label> real) va dins del requadre; gran quan el camp és buit, petit a dalt quan és ple o té el focus */
-.camps{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);align-items:start;gap:.75rem}
-.camp{position:relative;display:grid;gap:.25rem;min-width:0}
-.camp.ample{grid-column:1/-1}
-.camp label{position:absolute;left:19px;top:8px;font-size:.78rem;font-weight:500;line-height:1.2;color:var(--text-2);pointer-events:none;transition:top .15s,font-size .15s,transform .15s}
-.camp:has(:placeholder-shown:not(:focus)) label{top:28px;transform:translateY(-50%);font-size:1rem}
-.camp input,.camp textarea{width:100%;min-height:56px;padding:1.45rem 18px .4rem;border:1px solid var(--vora);border-radius:var(--radi-camp);background:var(--superficie);color:var(--text);font:400 1rem var(--f-cos)}
-.camp textarea{min-height:84px;resize:vertical}
-.camp:has(textarea) label{pointer-events:none}
-.camp .error{padding-left:19px;color:var(--error);font-size:var(--t-petit);font-weight:600}
-.camp.amb-error input,.camp.amb-error textarea{border-color:var(--error);box-shadow:inset 0 0 0 1px var(--error)}
-.camp.amb-error label{color:var(--error)}
-.avis-errors{margin:.8rem 0 0;color:var(--error);font-weight:700}
-.pas>.boto{margin-top:1rem}
-
-/* Desglossament */
-.desglos{display:grid;gap:.35rem;margin:1rem 0 0;font-variant-numeric:tabular-nums}
-.desglos div{display:flex;justify-content:space-between;gap:1rem}
-.desglos .total{border-top:1.5px solid var(--text);padding-top:.5rem;font:var(--pes-titol) 1.25rem var(--f-titol)}
-.nota-recurrent{margin:.1rem 0 0;font-size:var(--t-petit);color:var(--text-2);font-variant-numeric:normal;font-feature-settings:"tnum" 0,"pnum" 1}
-.camps-entrega{margin-top:.75rem}
-.camps-entrega:not(:has(>.camp:not([hidden]))){display:none}
-.nota-recurrent[hidden]{display:none}
-.nota-enviament{margin:.5rem 0 0;font-size:var(--t-petit);color:var(--text-2)}
-
-/* Pas 3 sense pagament per la web (sense ?presentacio): el telèfon. El pagament és a pagament.html (css/pagament.css) */
-.sense-pagament h4{margin:0 0 .5rem;font:var(--pes-titol) 1.3rem/1.15 var(--f-titol);color:var(--text);letter-spacing:var(--track)}
-.sense-pagament p{margin:0 0 .6rem}
-.sense-pagament .telefon-gran{font:var(--pes-titol) 1.8rem/1.1 var(--f-titol);letter-spacing:var(--track)}
-
 /* Hover (només amb ratolí): els botons canvien de color en 0,15 s i les preguntes responen */
 @media (hover:hover){
-  .boto,.boto-sec,.boto-lleu,.tanca,.faq summary{transition:background-color .15s,color .15s}
+  .boto,.boto-sec,.boto-lleu,.faq summary{transition:background-color .15s,color .15s}
   .faq summary:hover{color:var(--cta-fosc)}
 }
 
 @media (prefers-reduced-motion:reduce){
-  .cap,.cap img,.full,.vel,.demana-mobil,.camp label,.boto,.boto-sec,.boto-lleu,.tanca,.faq summary{transition:none}
+  .cap,.cap img,.demana-mobil,.boto,.boto-sec,.boto-lleu,.faq summary{transition:none}
 }
 
 /* Interruptor «Vista mòbil» de la web (js/vista-mobil.js; només amb ?presentacio i a ≥ 861 px): la web dins d'un marc
@@ -339,58 +280,7 @@ body.full-obert .full{transform:none;visibility:visible;transition:transform .32
   .lot .l-compra .boto{font-size:.94rem;padding-inline:.6rem}
   .franja .barra{width:150px}
   .segell ul{grid-template-columns:minmax(0,1fr)}
-  .full{top:auto;left:0;right:0;bottom:0;width:100%;max-height:82svh;border-radius:14px 14px 0 0;transform:translateY(100%);padding-bottom:env(safe-area-inset-bottom)}
-  .full-cap{border-radius:14px 14px 0 0}
-  .camps{grid-template-columns:minmax(0,1fr)}
 }
 
-/* Fase A de la versió real (07/11/2026): enviament per zones, avisos de tanda nova i subscripció. Prototip triat:
-   PLA-eines/versio-real/prototip (variants B, A i B). Animacions d'un sol cop, curtes i sense rebot. */
-@keyframes entra{from{opacity:0;transform:translateY(4px)}to{opacity:1;transform:none}}
-.entra{animation:entra .18s ease-out both}
-
-.env-tria{margin:1rem 0 0}
-.env-tria:empty{display:none}
-.env-tria .segment{display:grid;grid-template-columns:1fr 1fr;padding:4px;border-radius:999px;background:var(--tria);gap:4px}
-.env-tria .segment label{position:relative;display:grid;place-items:center;min-height:44px;padding:0 .6rem;border-radius:999px;font-weight:700;font-size:.94rem;text-align:center;cursor:pointer}
-.env-tria .segment input{position:absolute;opacity:0;inset:0;margin:0;cursor:pointer}
-.env-tria .segment label:has(input:checked){background:var(--cta);color:var(--sobre-cta)}
-.env-tria .segment label:has(input:focus-visible){outline:3px solid var(--accent);outline-offset:2px}
-@media (hover:hover){.env-tria .segment label:hover:not(:has(input:checked)){background:var(--suau)}}
-.env-tria .nota,.sub-b .nota{margin:.6rem 0 0;font-size:var(--t-petit);color:var(--text-2)}
-.env-tria .nota strong{color:var(--text)}
-.env-tria .nota a{color:inherit;font-weight:700}
-.legend-p{margin:.7rem 0 .5rem;font-weight:700;font-size:.94rem;padding:0}
-
-.pindoles{display:flex;flex-wrap:wrap;gap:.45rem;border:0;margin:0;padding:0;min-width:0}
-.pindola{position:relative;display:inline-flex;align-items:center;min-height:44px;padding:0 1.05rem;border-radius:999px;box-shadow:inset 0 0 0 1.5px var(--vora);background:var(--superficie);font-weight:700;font-size:.94rem;cursor:pointer}
-.pindola input{position:absolute;opacity:0;inset:0;margin:0;cursor:pointer}
-.pindola:has(input:checked){background:var(--cta);color:var(--sobre-cta);box-shadow:none}
-.pindola:has(input:focus-visible){outline:3px solid var(--accent);outline-offset:3px}
-@media (hover:hover){.pindola:hover:not(:has(input:checked)){background:var(--tria)}}
-.pindola small{font-weight:400;opacity:.8;margin-left:.4rem}
-
-.boto-trucada{background:var(--cta);color:var(--sobre-cta);text-align:center;text-decoration:none}
-
-.avis-a{margin:1rem 0 0;font-size:var(--t-petit);color:var(--text-2)}
-.avis-a p{margin:0 0 .45rem}
-.casella{display:flex;align-items:flex-start;gap:.6rem;cursor:pointer;color:var(--text)}
-.casella input{flex:none;width:20px;height:20px;margin:1px 0 0;accent-color:var(--cta)}
-
-.sub-b{margin:1rem 0 0;padding:.9rem 1rem;border:1px solid var(--vora);border-radius:var(--radi-camp);background:var(--superficie)}
-.sub-b[hidden]{display:none}
-.sub-b.on{background:var(--tria);border-color:var(--cta)}
+/* Base de .interruptor: també la fa servir el panell (button.interruptor, css/panell.css); la resta de l'interruptor del formulari de compra és a css/compra.css */
 .interruptor{position:relative;display:flex;align-items:center;justify-content:space-between;gap:1rem;cursor:pointer}
-.interruptor .tx{display:grid;gap:.1rem}
-.interruptor .tx b{font-size:1rem}
-.interruptor .tx span{font-size:var(--t-petit);color:var(--text-2)}
-.interruptor input{position:absolute;opacity:0;width:1px;height:1px}
-.pal{flex:none;position:relative;width:48px;height:28px;border-radius:999px;background:var(--oliva-300);transition:background-color .18s}
-.pal::after{content:"";position:absolute;top:3px;left:3px;width:22px;height:22px;border-radius:50%;background:#fff;transition:transform .18s ease-out}
-.interruptor input:checked~.pal{background:var(--cta)}
-.interruptor input:checked~.pal::after{transform:translateX(20px)}
-.interruptor input:focus-visible~.pal{outline:3px solid var(--accent);outline-offset:3px}
-.sub-b .pindoles{margin-top:.8rem}
-.sub-b #sub-freq{display:contents}
-
-@media (prefers-reduced-motion:reduce){.entra{animation:none}.pal,.pal::after{transition:none}}

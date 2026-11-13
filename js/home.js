@@ -1,6 +1,6 @@
 /* Casa Camp — home: la franja de la tanda, el bloc de la tanda de la secció del lot, les peces, els preus i la barra
    fixa del mòbil. Tot ho llegeix de js/dades.js i js/magatzem.js (res no s'escriu a mà). Textos: PLA-COPY.md §1.
-   El full de compra és a js/compra.js. */
+   La pàgina de compra és compra.html (js/compra.js). */
 (function () {
   'use strict';
 
@@ -29,8 +29,8 @@
     el('l-llista').innerHTML = D.peces.map((p) => `<li><span>${C.esc(p.nom)}</span><span>${kgPeça(p.grams)}</span></li>`).join('');
   }
 
-  // Selector de quantitat de la caixa de compra: el botó obre el full amb aquests lots (data-lots, js/compra.js). El
-  // màxim és el mateix que el del full; si no caben a la tanda d'ara, ho diu el full abans de pagar.
+  // Selector de quantitat de la caixa de compra: el botó porta a la pàgina de compra amb aquests lots (?lots=, js/compra.js). El
+  // màxim és el mateix que el de la pàgina; si no caben a la tanda d'ara, ho diu la pàgina abans de pagar.
   let lots = 1;
   let textQueden = ''; // el text de #t-queden quan els lots hi caben (el posa pinta())
   const maxLots = () => M.maxLotsPerComanda('lot') || M.placesPerTanda();
@@ -38,13 +38,14 @@
     lots = Math.min(Math.max(1, lots + canvi), maxLots());
     Moviment.text(el('l-num'), C.lots(lots), 'balanca');
     Moviment.teus(el('t-barra'), lots);
-    // Si els lots no hi caben a la tanda d'ara, van tots junts a la següent: ho diu la mateixa frase que el full
+    // Si els lots no hi caben a la tanda d'ara, van tots junts a la següent: ho diu la mateixa frase que la pàgina de compra
     const a = M.previsioAssignacio(lots, 'lot');
     el('t-queden').textContent = a.ok && a.motiu !== 'hi-cap' ? C.fraseTandaSeguent(a.dataLimit) : textQueden;
     el('l-menys').disabled = lots <= 1;
     el('l-mes').disabled = lots >= maxLots();
-    el('l-demana').dataset.lots = lots;
+    el('l-demana').href = C.ambPresentacio('compra.html?lots=' + lots);
   }
+  el('l-demana').href = C.ambPresentacio('compra.html?lots=1'); // en carregar també, perquè l'enllaç porti ?presentacio
   el('l-menys').addEventListener('click', () => quantitat(-1));
   el('l-mes').addEventListener('click', () => quantitat(1));
 

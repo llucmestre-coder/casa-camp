@@ -1,86 +1,43 @@
-/* Casa Camp — full de compra. Un sol full lateral (des de baix al mòbil), sense compte: lots → dades → pagament.
-   Serveix per al lot, la mitja canal i la canal sencera. Textos: PLA-COPY.md §2. Les dades i les regles vénen de
-   js/dades.js i js/magatzem.js; aquí només hi ha la interfície.
-   El pagament és a pagament.html (js/pagament.js), només amb `?presentacio`. Sense, el pas 3 diu que ara es demana
-   per telèfon i no es desa res (§8.A: cap èxit que no ha passat). */
+/* Casa Camp — pantalla de compra (compra.html; en Lluc, 13/11/2026: substitueix el full lateral). Una pàgina, sense
+   compte: lots → dades → pagament. Serveix per al lot, la mitja canal i la canal sencera. Textos: PLA-COPY.md §2. Les
+   dades i les regles vénen de js/dades.js i js/magatzem.js; aquí només hi ha la interfície.
+   La quantitat arriba de la fitxa de la home (`?lots=N`) i es manté a l'adreça. El pagament és a pagament.html
+   (js/pagament.js), només amb `?presentacio`. Sense, el pas 3 diu que ara es demana per telèfon i no es desa res
+   (§8.A: cap èxit que no ha passat). */
 (function () {
   'use strict';
 
   const D = window.CassovallDades;
   const M = window.CassovallMagatzem;
   const C = window.CasaCamp;
-  const $ = (s, el) => (el || document).querySelector(s);
-  const $$ = (s, el) => Array.from((el || document).querySelectorAll(s));
   const esc = C.esc;
 
   const TEL = D.contacte.telefons[0];
   const TEL_HREF = 'tel:+34' + TEL.replace(/\s+/g, '');
   const TITOLS = { lot: 'Demana el teu lot', 'mitja-canal': 'Demana mitja canal', canal: 'Demana una canal sencera' };
   const NOMS_CANAL = { 'mitja-canal': 'Mitja canal', canal: 'Canal sencera' };
+  // El resum de l'esquerra: els mateixos noms i fotos que el de la pàgina de pagament
+  const NOMS = { lot: 'Lot de vedella de 5 kg', 'mitja-canal': 'Mitja canal', canal: 'Canal sencera' };
+  const FOTOS = { lot: 'assets/fotos/lot-840.webp', 'mitja-canal': 'assets/fotos/canal.webp', canal: 'assets/fotos/canal.webp' };
 
-  const full = $('#full');
   const camps = ['nom', 'cognoms', 'telefon', 'email', 'adreca', 'cp', 'poblacio'];
   const el = (id) => document.getElementById(id);
 
   // `mode` ('recollida' | 'casa') i `poble`: l'enviament a les rodalies, res triat d'entrada. `sub`: la subscripció, apagada
   // d'entrada. `noAvis`: la casella de la P45 (desmarcada).
-  const S = { producte: 'lot', lots: 1, opener: null, mode: null, poble: null, sub: { on: false, freq: D.subscripcio.frequenciaPerDefecte }, noAvis: false, cpAnterior: '', poblacioAuto: '' };
+  const S = { producte: 'lot', lots: 1, mode: null, poble: null, sub: { on: false, freq: D.subscripcio.frequenciaPerDefecte }, noAvis: false, cpAnterior: '', poblacioAuto: '' };
 
   const aPart = () => !D.productes[S.producte].ocupaPlaces;
   const maxLots = () => (S.producte === 'lot' ? M.maxLotsPerComanda('lot') || M.placesPerTanda() : 1);
 
-  /* ---------- Obrir i tancar (focus atrapat, Esc, el focus torna al botó) ---------- */
-
-  function obre(producte, opener, lots) {
-    const id = D.productes[producte] ? producte : 'lot';
-    if (id !== S.producte) S.lots = 1;
-    S.producte = id;
-    // La caixa de compra de la home porta la quantitat triada (data-lots); el full la manté dins dels límits
-    if (id === 'lot' && lots > 0) S.lots = Math.min(lots, maxLots());
-    S.opener = opener || document.activeElement;
-    full.inert = false;
-    document.body.classList.add('full-obert');
-    Moviment.silenci(render); // en obrir, els valors ja són al seu lloc: res no s'hi mou
-    setTimeout(() => $('.tanca', full).focus({ focusVisible: false }), 50);
+  // La quantitat es manté a l'adreça: en tornar enrere des del pagament o en recarregar, és la que s'havia triat
+  function desaLotsURL() {
+    if (S.producte !== 'lot') return;
+    const u = new URL(location.href);
+    if (u.searchParams.get('lots') === String(S.lots)) return;
+    u.searchParams.set('lots', S.lots);
+    history.replaceState(null, '', u);
   }
-
-  function tanca() {
-    document.body.classList.remove('full-obert');
-    full.inert = true;
-    if (S.opener && S.opener.focus) S.opener.focus();
-    S.opener = null;
-  }
-
-  function focusables() {
-    return $$('button, input, textarea, a[href]', full).filter((e) => !e.disabled && !e.closest('[hidden]') && e.offsetParent !== null);
-  }
-
-  document.addEventListener('click', (e) => {
-    const b = e.target.closest('[data-obre-full]');
-    if (b) {
-      obre(b.dataset.obreFull || 'lot', b, Number(b.dataset.lots) || 0);
-      return;
-    }
-    if (e.target.closest('[data-tanca-full]')) tanca();
-  });
-  document.addEventListener('keydown', (e) => {
-    if (!document.body.classList.contains('full-obert')) return;
-    if (e.key === 'Escape') {
-      e.preventDefault();
-      tanca();
-      return;
-    }
-    if (e.key !== 'Tab') return;
-    const f = focusables();
-    if (!f.length) return;
-    if (e.shiftKey && document.activeElement === f[0]) {
-      e.preventDefault();
-      f[f.length - 1].focus();
-    } else if (!e.shiftKey && document.activeElement === f[f.length - 1]) {
-      e.preventDefault();
-      f[0].focus();
-    }
-  });
 
   /* ---------- Pas 1: quantitat i tanda ---------- */
 
@@ -102,7 +59,7 @@
   }
 
   const opcionsEnviament = () => ({ mode: S.mode, poble: S.poble, lots: S.lots });
-  // Recollida a Sort (zona de Sort): el full no demana l'adreça ni les notes d'entrega
+  // Recollida a Sort (zona de Sort): la pàgina no demana l'adreça ni les notes d'entrega
   const recollidaSort = () => !aPart() && S.mode === 'recollida' && D.zonaDeCP(el('f-cp').value) === 'rodalies';
 
   function etiquetes() {
@@ -197,7 +154,10 @@
 
   function render() {
     const lot = S.producte === 'lot';
-    el('full-titol').textContent = TITOLS[S.producte];
+    el('compra-titol').textContent = TITOLS[S.producte];
+    el('r-nom').textContent = NOMS[S.producte];
+    if (el('r-foto').getAttribute('src') !== FOTOS[S.producte]) el('r-foto').src = FOTOS[S.producte];
+    desaLotsURL();
     el('pas-1-titol').textContent = lot ? '1. Quants lots vols' : '1. Què demanes';
     el('quant').hidden = !lot;
     Moviment.text(el('q-num'), S.lots, 'balanca');
@@ -217,23 +177,26 @@
 
   // Amb el lot recurrent encès, sota el total: què es paga avui i què es cobrarà a cada tanda següent
   function liniaRecurrent(e) {
-    let p = el('d-recurrent');
-    if (!p) {
-      p = document.createElement('p');
-      p.id = 'd-recurrent';
-      p.className = 'nota-recurrent';
-      el('desglos').appendChild(p);
-    }
     const hi = S.producte === 'lot' && M.subscripcioActiva() && S.sub.on && !!e.total && !aPart();
-    p.hidden = !hi;
-    p.textContent = hi ? `Avui pagues ${e.total}. A cada tanda següent, ${e.total} (${C.lots(S.lots)}${e.env.lliurament === 'recull' ? '' : ' + enviament'}).` : '';
+    const text = hi ? `Avui pagues ${e.total}. A cada tanda següent, ${e.total} (${C.lots(S.lots)}${e.env.lliurament === 'recull' ? '' : ' + enviament'}).` : '';
+    ['d-recurrent', 'r-recurrent'].forEach((id) => {
+      el(id).hidden = !hi;
+      el(id).textContent = text;
+    });
+  }
+
+  // El desglossament surt dues vegades: al resum de l'esquerra (`r-`, escriptori) i abans del botó (`d-`, mòbil). El CSS
+  // n'ensenya un de sol; totes dues còpies porten sempre el mateix.
+  function posaXifra(clau, valor, mode) {
+    Moviment.text(el('d-' + clau), valor, mode);
+    Moviment.text(el('r-' + clau), valor, mode);
   }
 
   // `mode`: 'suau' (només la xifra, quan canvia la quantitat) o 'balanca' (l'enviament i el total, quan el codi postal és complet)
   function renderDesglos(mode) {
     const e = etiquetes();
-    Moviment.text(el('d-lots'), e.concepte);
-    Moviment.text(el('d-lots-imp'), e.preu);
+    posaXifra('lots', e.concepte);
+    posaXifra('lots-imp', e.preu);
     let env = 'Posa el codi postal i te’l calculem';
     let nota = '';
     if (aPart()) {
@@ -255,10 +218,13 @@
         nota = e.env.caixes > 1 ? `Te’l portem en ${e.env.caixes} caixes.` : '';
       }
     }
-    Moviment.text(el('d-env'), env, mode);
-    Moviment.text(el('d-total'), (aPart() && e.env.valid && !e.env.enviable ? null : e.total) || '—', mode);
+    posaXifra('env', env, mode);
+    const total = (aPart() && e.env.valid && !e.env.enviable ? null : e.total) || '—';
+    posaXifra('total', total, mode);
+    el('r-total').parentElement.classList.toggle('cp-pendent', total === '—');
     liniaRecurrent(e);
     el('d-nota').textContent = nota;
+    el('r-nota').textContent = nota;
     renderEnviament();
   }
 
@@ -406,7 +372,7 @@
     el('pas-3-cos').innerHTML = `<div class="sense-pagament"><h4>${titol}</h4><p>${text}</p><p class="telefon-gran">${esc(TEL)}</p><a class="boto" href="${TEL_HREF}">Truca</a></div>`;
     el('pas-3').hidden = false;
     el('pas-3').scrollIntoView({ block: 'start', behavior: 'auto' });
-    const primer = focusables().find((x) => el('pas-3').contains(x));
+    const primer = el('pas-3').querySelector('a[href], button');
     if (primer) primer.focus();
   }
 
@@ -425,26 +391,31 @@
     location.href = C.ambPresentacio('pagament.html');
   }
 
-  // «Torna» des de la pàgina de pagament (index.html#comanda): el full s'obre amb el que ja s'havia escrit
-  function recuperaComanda() {
-    if (location.hash !== '#comanda') return;
-    history.replaceState(null, '', location.pathname + location.search);
+  /* ---------- Arrencada ----------
+     Si en aquesta pestanya hi ha una comanda a mitges (s'ha tornat de la pàgina de pagament), la pàgina surt amb el que
+     ja s'havia escrit. La quantitat de l'adreça (`?lots=N`, de la fitxa de la home) mana sobre la desada. */
+  function arrenca() {
     const c = C.comandaEnCurs.llegeix();
-    if (!c) return;
-    camps.concat('notes').forEach((k) => {
-      if (c.client[k] !== undefined) el('f-' + k).value = c.client[k];
-    });
-    S.cpAnterior = String(c.client.cp || '').replace(/\s+/g, '');
-    S.mode = c.enviament ? c.enviament.mode : null;
-    S.poble = c.enviament ? c.enviament.poble : null;
-    S.sub = { on: !!c.subscripcio, freq: c.subscripcio ? c.subscripcio.frequenciaSetmanes : D.subscripcio.frequenciaPerDefecte };
-    S.noAvis = c.avisosTanda === false;
-    el('f-no-avisos').checked = S.noAvis;
-    obre(c.producte, null, c.lots);
+    if (c) {
+      camps.concat('notes').forEach((k) => {
+        if (c.client[k] !== undefined) el('f-' + k).value = c.client[k];
+      });
+      S.producte = D.productes[c.producte] ? c.producte : 'lot';
+      S.lots = c.lots;
+      S.cpAnterior = String(c.client.cp || '').replace(/\s+/g, '');
+      S.mode = c.enviament ? c.enviament.mode : null;
+      S.poble = c.enviament ? c.enviament.poble : null;
+      S.sub = { on: !!c.subscripcio, freq: c.subscripcio ? c.subscripcio.frequenciaSetmanes : D.subscripcio.frequenciaPerDefecte };
+      S.noAvis = c.avisosTanda === false;
+      el('f-no-avisos').checked = S.noAvis;
+    }
+    const n = Math.floor(Number(new URLSearchParams(location.search).get('lots')));
+    if (S.producte === 'lot' && n > 0) S.lots = n;
+    S.lots = Math.max(1, Math.min(Number(S.lots) || 1, maxLots()));
+    el('cp-torna').href = C.ambPresentacio('index.html#lot');
+    Moviment.silenci(render); // en entrar, els valors ja són al seu lloc: res no s'hi mou
   }
 
   if (M.presentacio()) el('continua').textContent = 'Continua al pagament';
-  recuperaComanda();
-
-  window.CompraFull = { obre, tanca };
+  arrenca();
 })();
