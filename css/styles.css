@@ -157,8 +157,19 @@ h2{font-weight:var(--pes-titol);font-size:var(--t-h2);line-height:1.08;margin:0}
    selector de quantitat, que és a la pàgina de compra. Les canals mantenen la graella de tres columnes. */
 .lot .lot-graella{grid-template-columns:minmax(0,1fr) minmax(0,1fr);grid-template-areas:"foto cap" "foto peces" "foto caixa" "info info";grid-template-rows:auto auto 1fr auto}
 .lot .l-cap,.lot .l-peces,.lot .l-caixa{max-width:34rem}
-.lot .l-caixa{background:none;border-radius:0;padding:0;margin-top:.4rem}
-.l-demana{width:100%;min-height:52px;margin-top:1rem}
+/* Compacta perquè la fitxa sencera es vegi en una pantalla baixa (en Lluc, 13/11/2026: ~650 px d'alt amb el zoom del
+   navegador): files de peces més juntes, el preu petit (el que importa és què porta el lot) al costat del botó, i
+   l'ancoratge deixa el títol just sota la capçalera fixa. */
+section.lot{scroll-margin-top:16px}
+.lot .l-llista li{padding:.34rem 0}
+.lot .l-caixa{display:grid;grid-template-columns:auto minmax(0,1fr);align-items:center;gap:0 1.2rem;background:none;border-radius:0;padding:0}
+.lot .l-preu{flex-direction:column;align-items:flex-start;gap:0}
+.lot .l-preu strong{font-size:1.45rem}
+.lot .l-preu span{font-size:var(--t-petit)}
+.lot .l-tanda,.lot .l-enllac{grid-column:1/-1}
+.lot .l-tanda{margin-top:.9rem}
+.lot .l-enllac{justify-self:start;margin-top:.4rem}
+.l-demana{min-height:48px}
 @media (hover:hover){.l-enllac:hover{color:var(--cta-fosc)}}
 
 /* ---------- Canals: fitxa de compra amb selector de mida (03/11/2026). Fa servir la graella i les peces del lot
@@ -264,8 +275,10 @@ body.pagina{--x-pag:calc(max(0px,(100% - 46rem) / 2) + var(--marge-x));display:f
   .l-compra{margin-top:.8rem}
   .lot .lot-graella{grid-template-columns:minmax(0,2fr) minmax(0,3fr);grid-template-areas:"cap cap" "foto peces" "caixa caixa" "info info";grid-template-rows:none}
   .lot .l-cap,.lot .l-peces,.lot .l-caixa{max-width:none}
-  .lot .l-caixa{margin-top:0}
-  .l-demana{margin-top:.8rem}
+  .lot .l-caixa{display:block}
+  .lot .l-preu{flex-direction:row;align-items:baseline;gap:.2rem .8rem}
+  .lot .l-preu strong{font-size:1.45rem}
+  .l-demana{width:100%;margin-top:.7rem}
   .demana-mobil.visible~.wa-flota{bottom:calc(76px + env(safe-area-inset-bottom))}
   .l-tanda{margin-top:.8rem}
   .l-enllac{margin-top:.35rem}
